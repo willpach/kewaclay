@@ -25,10 +25,8 @@ function doPost(e) {
   lock.waitLock(10000);
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName("Orders");
-    if (!sheet) {
-      sheet = ss.insertSheet("Orders");
-    }
+    // Uses a tab named "Orders" if there is one, otherwise the first tab.
+    const sheet = ss.getSheetByName("Orders") || ss.getSheets()[0];
     if (sheet.getLastRow() === 0) {
       sheet.appendRow(HEADERS);
       sheet.setFrozenRows(1);

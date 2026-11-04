@@ -26,7 +26,7 @@ Until a photo is added, its card says "Photo coming soon."
 3. **Deploy → New deployment →** gear icon **→ Web app**. Set *Execute as: Me* and *Who has access: Anyone*. Click Deploy and allow access.
 4. Copy the Web app URL (it ends in `/exec`) into `endpoint` in `index.html`.
 
-Each order becomes a row in the **Orders** tab, with its order number, mugs, total, amount due now and amount due at pickup. There are empty "Paid?" and "Picked up?" columns for you.
+Each order becomes a row in the first tab (or a tab named **Orders**), with its order number, mugs, total, amount due now and amount due at pickup. There are empty "Paid?" and "Picked up?" columns for you.
 
 ## Turn on the website
 

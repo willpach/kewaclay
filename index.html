@@ -20,6 +20,9 @@
     nameExtra: 5,
     deposit: 20,
     fullPayDiscountPerMug: 2,          // $ off each mug when paid in full now
+    // Multi-mug deals: each set of 4 saves $20 (4 for $100), each pair saves $5 (2 for $55).
+    // Discounts don't combine: buyers automatically get whichever saves them more.
+    bundles: [ { size: 4, off: 20, label: "4-mug set" }, { size: 2, off: 5, label: "2-mug pair" } ],
     nameMaxLength: 12,
     designs: [
       { id: "dinosaur",  title: "Dinosaur",                  extra: 0,  img: "images/dinosaur.jpg",
@@ -173,6 +176,7 @@
   <div class="facts">
     <span class="fact">16 oz · $30</span>
     <span class="fact">Custom name +$5</span>
+    <span class="fact">2 mugs: save $5 · 4 mugs: save $20</span>
     <span class="fact">$20 deposit holds your order</span>
     <span class="fact" id="factDeadline">Orders close Nov 22</span>
     <span class="fact" id="factReady">Pickup week of Dec 7</span>
@@ -222,10 +226,10 @@
 
           <fieldset>
             <legend>How will you get your mugs?</legend>
-            <label class="choice"><input type="radio" name="fulfillment" value="Pickup, week of Dec 7" checked>
-              <span>Pick up the week of Dec 7<br><span class="help">I'll text you the place and time.</span></span></label>
-            <label class="choice"><input type="radio" name="fulfillment" value="Local delivery (Albuquerque)">
-              <span>Local delivery in Albuquerque<br><span class="help">Delivery fee is extra. I'll text you the cost.</span></span></label>
+            <label class="choice"><input type="radio" name="fulfillment" value="Pickup — arrange when ready" checked>
+              <span>Pick up when it's ready<br><span class="help">Mugs are ready starting the week of Dec 7. I'll text you to arrange a time and place.</span></span></label>
+            <label class="choice"><input type="radio" name="fulfillment" value="Local delivery (Santo Domingo Pueblo)">
+              <span>Local delivery in Santo Domingo Pueblo<br><span class="help">I'll text you to set up a delivery time.</span></span></label>
             <label class="choice"><input type="radio" name="fulfillment" value="Shipping">
               <span>Shipping<br><span class="help">Shipping is extra. I'll text you the cost before sending.</span></span></label>
           </fieldset>
@@ -264,7 +268,8 @@
         <div class="row big"><span>Total</span><span id="tTotal">$0</span></div>
         <div class="row due"><span>Pay now</span><span id="tNow">$0</span></div>
         <div class="row"><span>Due at pickup</span><span id="tLater">$0</span></div>
-        <p class="note" id="shipNote" style="display:none">Delivery or shipping cost is added separately.</p>
+        <p class="note" id="shipNote" style="display:none">Shipping cost is added separately.</p>
+        <p class="note">Discounts don't combine. You automatically get whichever saves you more.</p>
         <button class="btn" id="submitBtn" style="width:100%;margin-top:14px" disabled>Review order</button>
         <div class="err" id="err"></div>
         <p class="note">After you submit, you'll get a Cash App link for your payment. Your order is held once the payment comes in.</p>
@@ -352,10 +357,15 @@
   function totals() {
     const subtotal = cart.reduce((s, i) => s + linePrice(i), 0);
     const pay = document.querySelector("input[name=pay]:checked").value;
-    const discount = pay === "full" ? cart.length * CONFIG.fullPayDiscountPerMug : 0;
+    let left = cart.length, bundleOff = 0; const sets = [];
+    CONFIG.bundles.forEach(b => { const n = Math.floor(left / b.size); if (n) { bundleOff += n * b.off; sets.push(`${n > 1 ? n + " × " : ""}${b.label}`); left -= n * b.size; } });
+    const fullOff = pay === "full" ? cart.length * CONFIG.fullPayDiscountPerMug : 0;
+    const useBundle = bundleOff > 0 && bundleOff >= fullOff;
+    const discount = useBundle ? bundleOff : fullOff;
+    const discountLabel = !discount ? "" : useBundle ? `Multi-mug discount (${sets.join(" + ")})` : "Paid-in-full discount";
     const total = subtotal - discount;
     const now = cart.length === 0 ? 0 : (pay === "full" ? total : Math.min(CONFIG.deposit, total));
-    return { subtotal, discount, total, now, later: total - now, pay };
+    return { subtotal, discount, discountLabel, total, now, later: total - now, pay, bundleOff };
   }
 
   function render() {
@@ -394,10 +404,12 @@
     $("#summaryLines").innerHTML = (Object.entries(counts).map(([id, n]) =>
       `<div class="row"><span>${n} × ${designs[id].title}</span><span>${money(n * (CONFIG.basePrice + designs[id].extra))}</span></div>`
     ).join("") + (names ? `<div class="row"><span>${names} × custom name</span><span>${money(names * CONFIG.nameExtra)}</span></div>` : "")
-      + (t.discount ? `<div class="row discount"><span>Paid-in-full discount</span><span>−${money(t.discount)}</span></div>` : ""))
+      + (t.discount ? `<div class="row discount"><span>${t.discountLabel}</span><span>−${money(t.discount)}</span></div>` : ""))
       || '<div class="row help"><span>Add a mug to see your total</span></div>';
-    $("#fullSaveLabel").textContent = "— save " + money(CONFIG.fullPayDiscountPerMug) + " per mug" +
-      (cart.length > 1 ? ` (${money(cart.length * CONFIG.fullPayDiscountPerMug)})` : "");
+    const pifOff = cart.length * CONFIG.fullPayDiscountPerMug;
+    $("#fullSaveLabel").textContent = (t.bundleOff && t.bundleOff >= pifOff)
+      ? "— your multi-mug discount is already bigger"
+      : "— save " + money(CONFIG.fullPayDiscountPerMug) + " per mug" + (cart.length > 1 ? ` (${money(pifOff)})` : "");
     $("#tTotal").textContent = money(t.total);
     $("#tNow").textContent = money(t.now);
     $("#tLater").textContent = money(t.later);
@@ -421,7 +433,7 @@
   form.addEventListener("change", () => {
     const ful = form.fulfillment.value;
     $("#addressField").style.display = ful === "Shipping" ? "block" : "none";
-    $("#shipNote").style.display = ful === "Pickup, week of Dec 7" ? "none" : "block";
+    $("#shipNote").style.display = ful === "Shipping" ? "block" : "none";
     render();
   });
 
@@ -447,7 +459,7 @@
         name: f.get("name").trim(), phone: f.get("phone").trim(), email: f.get("email").trim(), social: f.get("social").trim(),
         mugCount: String(cart.length), mugs: mugList,
         total: String(t.total),
-        payChoice: t.pay === "full" ? `Paid in full (saved ${money(t.discount)})` : "Deposit",
+        payChoice: (t.pay === "full" ? "Paid in full" : "Deposit") + (t.discount ? ` · ${t.discountLabel} −${money(t.discount)}` : ""),
         dueNow: String(t.now), dueAtPickup: String(t.later),
         fulfillment: f.get("fulfillment"), address: (f.get("address") || "").trim(),
         cashappName: f.get("cashappName").trim(), gift: f.get("gift") || "",
@@ -471,7 +483,7 @@
       <div class="block"><div class="label">Mugs</div>
         <ul>${cart.map(i => `<li>${esc(designs[i.design].title)}${i.hasName ? ` — name: <strong>“${esc(i.name.trim())}”</strong>` : ""} <span class="help">(${money(linePrice(i))})</span></li>`).join("")}</ul></div>
       <div class="block"><div class="label">Total</div>
-        ${t.discount ? `<div class="row"><span>Subtotal</span><span>${money(t.subtotal)}</span></div><div class="row discount"><span>Paid-in-full discount</span><span>−${money(t.discount)}</span></div>` : ""}
+        ${t.discount ? `<div class="row"><span>Subtotal</span><span>${money(t.subtotal)}</span></div><div class="row discount"><span>${t.discountLabel}</span><span>−${money(t.discount)}</span></div>` : ""}
         <div class="row"><strong>Total</strong><strong>${money(t.total)}</strong></div>
         <div class="row"><span>Pay now (Cash App)</span><strong>${money(t.now)}</strong></div>
         <div class="row"><span>Due at pickup</span><span>${money(t.later)}</span></div></div>

@@ -4,7 +4,7 @@ A one-page order form for holiday mug pre-orders. Buyers pick designs, add names
 
 ## Things to fill in (top of `index.html`, in `CONFIG`)
 
-- `cashtag`: your Cash App $cashtag
+- `cashtag`: your Cash App $cashtag (set to $WillPachecoClay)
 - `endpoint`: your Google Apps Script web app URL (see below)
 - Prices, deposit, deadline and design text are all there too.
 

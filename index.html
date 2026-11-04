@@ -19,6 +19,7 @@
     basePrice: 30,
     nameExtra: 5,
     deposit: 20,
+    fullPayDiscountPerMug: 2,          // $ off each mug when paid in full now
     nameMaxLength: 12,
     designs: [
       { id: "dinosaur",  title: "Dinosaur",                  extra: 0,  img: "images/dinosaur.jpg",
@@ -141,6 +142,24 @@
   .done .pay { display: inline-block; margin: 6px; text-decoration: none; }
 
   footer { padding: 30px 0 40px; text-align: center; color: var(--muted); font-size: 14px; }
+
+  .row.discount { color: var(--ok); font-weight: 600; }
+  .update-box { margin: 18px auto 0; max-width: 620px; text-align: center; font-size: 14px; }
+  .update-box .link { font-size: 14px; }
+  .update-form { display: none; margin-top: 10px; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .update-form input { width: 160px; margin: 0; text-transform: uppercase; }
+  .update-banner { display: none; background: var(--soft); border: 1.5px solid var(--ink); border-radius: 10px; padding: 12px 14px; margin-top: 16px; font-size: 15px; text-align: left; }
+
+  dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(560px, 94vw); max-height: 90vh; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(20,20,20,.55); }
+  .dlg { padding: 22px; overflow-y: auto; }
+  .dlg h2 { margin-bottom: 4px; }
+  .dlg .block { border-top: 1px solid var(--line); padding: 12px 0; }
+  .dlg .block:first-of-type { border-top: 0; }
+  .dlg .label { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .dlg ul { margin: 0; padding-left: 18px; }
+  .dlg .actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
+  .done .again { margin-top: 18px; }
 </style>
 </head>
 <body>
@@ -158,6 +177,15 @@
     <span class="fact" id="factDeadline">Orders close Nov 22</span>
     <span class="fact" id="factReady">Pickup week of Dec 7</span>
   </div>
+  <div class="update-box">
+    <button type="button" class="link" id="updateToggle">Already ordered and need to change it?</button>
+    <div class="update-form" id="updateForm">
+      <input type="text" id="updateId" placeholder="Order # (M-XXXX)" maxlength="6" aria-label="Your order number">
+      <button type="button" class="btn ghost" id="updateStart">Change this order</button>
+    </div>
+    <div class="err" id="updateErr"></div>
+  </div>
+  <div class="update-banner" id="updateBanner"></div>
 </header>
 
 <div class="steps" aria-hidden="true"></div>
@@ -210,7 +238,7 @@
             <label class="choice"><input type="radio" name="pay" value="deposit" checked>
               <span>$20 deposit now, balance at pickup</span></label>
             <label class="choice"><input type="radio" name="pay" value="full">
-              <span>Pay in full now</span></label>
+              <span>Pay in full now <strong id="fullSaveLabel"></strong></span></label>
           </fieldset>
           <label class="field">Your Cash App name <span class="help">So I can match your payment to your order.</span>
             <input type="text" name="cashappName">
@@ -237,7 +265,7 @@
         <div class="row due"><span>Pay now</span><span id="tNow">$0</span></div>
         <div class="row"><span>Due at pickup</span><span id="tLater">$0</span></div>
         <p class="note" id="shipNote" style="display:none">Delivery or shipping cost is added separately.</p>
-        <button class="btn" id="submitBtn" style="width:100%;margin-top:14px" disabled>Place pre-order</button>
+        <button class="btn" id="submitBtn" style="width:100%;margin-top:14px" disabled>Review order</button>
         <div class="err" id="err"></div>
         <p class="note">After you submit, you'll get a Cash App link for your payment. Your order is held once the payment comes in.</p>
       </aside>
@@ -254,8 +282,24 @@
     <a class="btn pay" id="payLink" href="#" target="_blank" rel="noopener">Pay with Cash App</a>
     <p class="note">Cash App: <strong id="doneTag"></strong></p>
     <p class="sub" style="margin-top:22px">I'll text you to confirm. <span id="doneReady"></span></p>
+    <p class="note" id="doneUpdateNote" style="display:none"></p>
+    <p class="note">Need to change it later? Use “Already ordered and need to change it?” at the top of this page with your order number.</p>
+    <button type="button" class="btn ghost again" id="againBtn">Place another order</button>
   </section>
 </main>
+
+<dialog id="reviewDlg" aria-labelledby="reviewTitle">
+  <div class="dlg">
+    <h2 id="reviewTitle">Review your order</h2>
+    <p class="sub" id="reviewSub">Please check everything before placing it.</p>
+    <div id="reviewBody"></div>
+    <div class="err" id="sendErr"></div>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="reviewBack">Go back and edit</button>
+      <button type="button" class="btn" id="reviewConfirm">Place pre-order</button>
+    </div>
+  </div>
+</dialog>
 
 <div class="steps" aria-hidden="true"></div>
 <footer class="wrap">Questions? Text me. · Every mug is hand-painted and fired with care.</footer>
@@ -306,10 +350,12 @@
     return CONFIG.basePrice + designs[item.design].extra + (item.hasName ? CONFIG.nameExtra : 0);
   }
   function totals() {
-    const total = cart.reduce((s, i) => s + linePrice(i), 0);
+    const subtotal = cart.reduce((s, i) => s + linePrice(i), 0);
     const pay = document.querySelector("input[name=pay]:checked").value;
+    const discount = pay === "full" ? cart.length * CONFIG.fullPayDiscountPerMug : 0;
+    const total = subtotal - discount;
     const now = cart.length === 0 ? 0 : (pay === "full" ? total : Math.min(CONFIG.deposit, total));
-    return { total, now, later: total - now, pay };
+    return { subtotal, discount, total, now, later: total - now, pay };
   }
 
   function render() {
@@ -344,11 +390,14 @@
     const counts = {};
     cart.forEach(i => counts[i.design] = (counts[i.design] || 0) + 1);
     const names = cart.filter(i => i.hasName).length;
-    $("#summaryLines").innerHTML = Object.entries(counts).map(([id, n]) =>
+    const t = totals();
+    $("#summaryLines").innerHTML = (Object.entries(counts).map(([id, n]) =>
       `<div class="row"><span>${n} × ${designs[id].title}</span><span>${money(n * (CONFIG.basePrice + designs[id].extra))}</span></div>`
     ).join("") + (names ? `<div class="row"><span>${names} × custom name</span><span>${money(names * CONFIG.nameExtra)}</span></div>` : "")
+      + (t.discount ? `<div class="row discount"><span>Paid-in-full discount</span><span>−${money(t.discount)}</span></div>` : ""))
       || '<div class="row help"><span>Add a mug to see your total</span></div>';
-    const t = totals();
+    $("#fullSaveLabel").textContent = "— save " + money(CONFIG.fullPayDiscountPerMug) + " per mug" +
+      (cart.length > 1 ? ` (${money(cart.length * CONFIG.fullPayDiscountPerMug)})` : "");
     $("#tTotal").textContent = money(t.total);
     $("#tNow").textContent = money(t.now);
     $("#tLater").textContent = money(t.later);
@@ -382,47 +431,134 @@
     return "M-" + s;
   }
 
-  $("#submitBtn").addEventListener("click", async () => {
+  const esc = (v) => String(v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let replacing = "";   // order # being changed, if any
+  let pending = null;   // order built at review time
+
+  function buildOrder() {
+    const f = new FormData(form);
+    const t = totals();
+    const mugList = cart.map((i, n) => `${n + 1}) ${designs[i.design].title}${i.hasName ? ` — name: "${i.name.trim()}"` : ""} — ${money(linePrice(i))}`).join("\n");
+    const notes = f.get("notes").trim();
+    return {
+      t, f, mugList,
+      data: {
+        orderId: orderId(),
+        name: f.get("name").trim(), phone: f.get("phone").trim(), email: f.get("email").trim(), social: f.get("social").trim(),
+        mugCount: String(cart.length), mugs: mugList,
+        total: String(t.total),
+        payChoice: t.pay === "full" ? `Paid in full (saved ${money(t.discount)})` : "Deposit",
+        dueNow: String(t.now), dueAtPickup: String(t.later),
+        fulfillment: f.get("fulfillment"), address: (f.get("address") || "").trim(),
+        cashappName: f.get("cashappName").trim(), gift: f.get("gift") || "",
+        notes: (replacing ? `UPDATE — replaces order ${replacing}. ` : "") + notes
+      }
+    };
+  }
+
+  $("#submitBtn").addEventListener("click", () => {
     const err = $("#err");
     const p = problems();
     if (p.length) { err.innerHTML = p.join("<br>"); err.style.display = "block"; return; }
     err.style.display = "none";
-    const f = new FormData(form);
-    const t = totals();
-    const id = orderId();
-    const mugList = cart.map((i, n) => `${n + 1}) ${designs[i.design].title}${i.hasName ? ` — name: "${i.name.trim()}"` : ""} — ${money(linePrice(i))}`).join("\n");
-    const payload = new URLSearchParams({
-      orderId: id,
-      name: f.get("name").trim(), phone: f.get("phone").trim(), email: f.get("email").trim(), social: f.get("social").trim(),
-      mugCount: String(cart.length), mugs: mugList,
-      total: String(t.total), payChoice: t.pay === "full" ? "Paid in full" : "Deposit",
-      dueNow: String(t.now), dueAtPickup: String(t.later),
-      fulfillment: f.get("fulfillment"), address: (f.get("address") || "").trim(),
-      cashappName: f.get("cashappName").trim(), gift: f.get("gift") || "", notes: f.get("notes").trim()
-    });
-    const btn = $("#submitBtn");
+    pending = buildOrder();
+    const { t, data } = pending;
+    $("#reviewTitle").textContent = replacing ? `Review your updated order` : "Review your order";
+    $("#reviewSub").textContent = replacing
+      ? `This replaces order ${replacing}. Please check everything before sending.`
+      : "Please check everything before placing it.";
+    $("#reviewBody").innerHTML = `
+      <div class="block"><div class="label">Mugs</div>
+        <ul>${cart.map(i => `<li>${esc(designs[i.design].title)}${i.hasName ? ` — name: <strong>“${esc(i.name.trim())}”</strong>` : ""} <span class="help">(${money(linePrice(i))})</span></li>`).join("")}</ul></div>
+      <div class="block"><div class="label">Total</div>
+        ${t.discount ? `<div class="row"><span>Subtotal</span><span>${money(t.subtotal)}</span></div><div class="row discount"><span>Paid-in-full discount</span><span>−${money(t.discount)}</span></div>` : ""}
+        <div class="row"><strong>Total</strong><strong>${money(t.total)}</strong></div>
+        <div class="row"><span>Pay now (Cash App)</span><strong>${money(t.now)}</strong></div>
+        <div class="row"><span>Due at pickup</span><span>${money(t.later)}</span></div></div>
+      <div class="block"><div class="label">Your info</div>
+        ${esc(data.name)} · ${esc(data.phone)}${data.email ? " · " + esc(data.email) : ""}</div>
+      <div class="block"><div class="label">Getting your mugs</div>
+        ${esc(data.fulfillment)}${data.address ? "<br>" + esc(data.address).replace(/\n/g, "<br>") : ""}</div>`;
+    $("#sendErr").style.display = "none";
+    $("#reviewConfirm").disabled = false;
+    $("#reviewConfirm").textContent = replacing ? "Send updated order" : "Place pre-order";
+    $("#reviewDlg").showModal();
+  });
+
+  $("#reviewBack").addEventListener("click", () => $("#reviewDlg").close());
+
+  $("#reviewConfirm").addEventListener("click", async () => {
+    const btn = $("#reviewConfirm"), err = $("#sendErr");
     btn.disabled = true; btn.textContent = "Sending…";
     try {
       if (!CONFIG.endpoint) throw new Error("no-endpoint");
-      await fetch(CONFIG.endpoint, { method: "POST", mode: "no-cors", body: payload });
+      await fetch(CONFIG.endpoint, { method: "POST", mode: "no-cors", body: new URLSearchParams(pending.data) });
     } catch (e) {
-      btn.disabled = false; btn.textContent = "Place pre-order";
+      btn.disabled = false; btn.textContent = replacing ? "Send updated order" : "Place pre-order";
       err.innerHTML = e.message === "no-endpoint"
-        ? "The order form isn't connected yet (no endpoint set). Please text me your order instead."
+        ? "The order form isn't connected yet. Please text me your order instead."
         : "Something went wrong sending your order. Please try again, or text me your order.";
       err.style.display = "block";
       return;
     }
+    $("#reviewDlg").close();
+    const { t, data } = pending;
     const tag = CONFIG.cashtag.replace(/^\$/, "");
-    $("#doneId").textContent = id;
+    $("#doneId").textContent = data.orderId;
     $("#donePay").textContent = money(t.now);
     $("#doneTag").textContent = "$" + tag;
     $("#payLink").href = `https://cash.app/$${tag}/${t.now}`;
     $("#doneReady").textContent = CONFIG.readyLabel + ".";
+    const note = $("#doneUpdateNote");
+    if (replacing) {
+      note.style.display = "block";
+      note.innerHTML = `This replaces order <strong>${esc(replacing)}</strong>. <strong>Already paid for that order? Don't pay again</strong>; I'll text you if you owe more or I owe you back.`;
+    } else { note.style.display = "none"; }
     $("#orderArea").style.display = "none";
     $("#doneArea").style.display = "block";
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
+
+  // Place another order: clear the mugs, keep contact info
+  $("#againBtn").addEventListener("click", () => {
+    cart = [];
+    setReplacing("");
+    form.notes.value = "";
+    form.agree.checked = false;
+    $("#doneArea").style.display = "none";
+    $("#orderArea").style.display = "block";
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  // Change an existing order
+  function setReplacing(id) {
+    replacing = id;
+    const b = $("#updateBanner");
+    if (id) {
+      b.style.display = "block";
+      b.innerHTML = `<strong>Changing order ${esc(id)}.</strong> Add the mugs you want now (your full updated order) and fill in your info. When you send it, it replaces your old order. <button type="button" class="link" id="cancelUpdate">Cancel</button>`;
+      $("#cancelUpdate").addEventListener("click", () => setReplacing(""));
+    } else { b.style.display = "none"; b.innerHTML = ""; }
+  }
+  $("#updateToggle").addEventListener("click", () => {
+    const uf = $("#updateForm");
+    uf.style.display = uf.style.display === "flex" ? "none" : "flex";
+    if (uf.style.display === "flex") $("#updateId").focus();
+  });
+  $("#updateStart").addEventListener("click", () => {
+    let v = $("#updateId").value.trim().toUpperCase().replace(/\s/g, "");
+    if (/^[A-Z0-9]{4}$/.test(v)) v = "M-" + v;
+    const e = $("#updateErr");
+    if (!/^M-[A-Z0-9]{4}$/.test(v)) { e.textContent = "Enter your order number, like M-7KQ3."; e.style.display = "block"; return; }
+    e.style.display = "none";
+    $("#updateForm").style.display = "none";
+    setReplacing(v);
+    $("#doneArea").style.display = "none";
+    $("#orderArea").style.display = "block";
+    document.querySelector("#designGrid").scrollIntoView({ behavior: "smooth" });
+  });
+  if (closed) $("#updateToggle").style.display = "none";
 
   render();
 })();

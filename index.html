@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hand-Painted Mug Pre-Orders</title>
+<meta name="description" content="Holiday pre-orders for hand-painted black-and-white mugs. Orders close Nov 22.">
+<script>
+  /* ============================================================
+     SETTINGS — edit these to change prices, dates and payment
+     ============================================================ */
+  const CONFIG = {
+    shopName: "Hand-Painted Mugs",
+    cashtag: "$YOURCASHTAG",          // ← your Cash App $cashtag
+    endpoint: "",                      // ← paste your Google Apps Script web app URL here (see README)
+    deadline: "2026-11-22T23:59:00-07:00",
+    deadlineLabel: "Sunday, Nov 22",
+    readyLabel: "Pickup starts the week of Monday, Dec 7",
+    basePrice: 30,
+    nameExtra: 5,
+    deposit: 20,
+    nameMaxLength: 12,
+    designs: [
+      { id: "dinosaur",  title: "Dinosaur",                  extra: 0,  img: "images/dinosaur.jpg",
+        blurb: "One or more smiling dinosaurs. The number and placement vary from mug to mug." },
+      { id: "mesaverde", title: "Mesa Verde–inspired",       extra: 0,  img: "images/mesaverde.jpg",
+        blurb: "Stepped and geometric designs inspired by Mesa Verde pottery. Patterns vary." },
+      { id: "robert",    title: "Designed by Robert Tenorio", extra: 10, img: "images/robert.jpg",
+        blurb: "Robert chooses the design, so each mug is one of a kind." },
+      { id: "rose",      title: "Designed by Rose Pacheco",   extra: 0,  img: "images/rose.jpg",
+        blurb: "Each mug is hand-painted and one of a kind." }
+    ]
+  };
+</script>
+<style>
+  :root {
+    --ink: #141414;
+    --paper: #fbfaf7;
+    --muted: #5d5a55;
+    --line: #d9d5ce;
+    --soft: #f1eee8;
+    --accent: #141414;
+    --ok: #1d6b3a;
+    --warn: #8a3b12;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+  /* stepped band, drawn in CSS so it needs no image */
+  .band {
+    height: 22px;
+    background:
+      linear-gradient(135deg, var(--ink) 25%, transparent 25%) 0 0 / 22px 22px,
+      linear-gradient(225deg, var(--ink) 25%, transparent 25%) 0 0 / 22px 22px;
+  }
+  .steps {
+    height: 18px; margin: 4px 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='18'%3E%3Cpath d='M0 18V12H6V6H12V0H24V6H30V12H36V18Z' fill='%23141414'/%3E%3C/svg%3E") repeat-x;
+  }
+
+  header { padding: 44px 0 28px; text-align: center; }
+  header .kicker { letter-spacing: .18em; text-transform: uppercase; font-size: 13px; color: var(--muted); font-weight: 600; }
+  header h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(32px, 6vw, 52px); line-height: 1.08; margin: 10px 0 14px; }
+  header p { max-width: 620px; margin: 0 auto; color: var(--muted); }
+  .facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 22px; }
+  .fact { border: 1.5px solid var(--ink); border-radius: 999px; padding: 6px 14px; font-size: 14px; font-weight: 600; background: #fff; }
+
+  .closed-banner { display: none; background: var(--ink); color: #fff; text-align: center; padding: 14px; font-weight: 600; }
+
+  section { padding: 26px 0; }
+  h2 { font-family: Georgia, "Times New Roman", serif; font-size: 28px; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+  .card { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+  .card .ph { aspect-ratio: 1 / 1; background: var(--soft); position: relative; overflow: hidden; }
+  .card .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .ph .fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: 13px; padding: 12px; }
+  .card .body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card h3 { margin: 0; font-size: 17px; line-height: 1.25; }
+  .card .price { font-weight: 700; }
+  .card .blurb { color: var(--muted); font-size: 14px; flex: 1; }
+  @media (max-width: 520px) {
+    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card .body { padding: 10px; }
+    .card h3 { font-size: 15px; }
+    .card .blurb { font-size: 13px; }
+    .card .btn { padding: 9px 10px; }
+    .totals { position: static; }
+  }
+  button { font: inherit; cursor: pointer; }
+  .btn { background: var(--ink); color: #fff; border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 700; }
+  .btn:hover { opacity: .88; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 1.5px solid var(--ink); }
+
+  .layout { display: grid; grid-template-columns: 1.25fr .9fr; gap: 24px; align-items: start; }
+  @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .panel + .panel { margin-top: 16px; }
+  .panel h3 { margin: 0 0 12px; font-size: 18px; }
+
+  .empty { color: var(--muted); font-style: italic; }
+  .line { border-top: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .line:first-child { border-top: 0; padding-top: 0; }
+  .line .t { font-weight: 600; }
+  .line .p { font-weight: 700; text-align: right; }
+  .line .opts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; }
+  .line input[type=text] { width: 170px; }
+  .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; font-size: 14px; }
+
+  label.field { display: block; margin-bottom: 12px; font-weight: 600; font-size: 14px; }
+  label.field span.opt { color: var(--muted); font-weight: 400; }
+  input[type=text], input[type=tel], input[type=email], textarea, select {
+    width: 100%; font: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; margin-top: 5px;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+  .help { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; margin-bottom: 8px; font-weight: 500; font-size: 15px; cursor: pointer; }
+  .choice:has(input:checked) { border-color: var(--ink); background: var(--soft); }
+  .choice input { margin-top: 4px; }
+  fieldset { border: 0; padding: 0; margin: 0 0 12px; }
+  legend { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+
+  .totals { position: sticky; top: 16px; }
+  .row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .row.big { font-size: 20px; font-weight: 800; border-top: 2px solid var(--ink); margin-top: 8px; padding-top: 10px; }
+  .row.due { font-weight: 700; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .err { color: var(--warn); font-size: 14px; margin-top: 10px; display: none; }
+
+  .done { display: none; text-align: center; }
+  .done .oid { font-size: 28px; font-weight: 800; letter-spacing: .06em; border: 2px dashed var(--ink); display: inline-block; padding: 6px 16px; border-radius: 10px; margin: 8px 0 14px; }
+  .done .pay { display: inline-block; margin: 6px; text-decoration: none; }
+
+  footer { padding: 30px 0 40px; text-align: center; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="band" aria-hidden="true"></div>
+<div class="closed-banner" id="closedBanner">Pre-orders are closed for this round. Thank you! Look for me at upcoming markets.</div>
+
+<header class="wrap">
+  <div class="kicker">Holiday pre-orders</div>
+  <h1>Hand-painted black &amp; white mugs</h1>
+  <p>Every mug is hand-painted and fired in small batches, so no two are exactly alike. If you order a set, the mugs will share a style but won't be identical. That's part of what makes them handmade.</p>
+  <div class="facts">
+    <span class="fact">16 oz · $30</span>
+    <span class="fact">Custom name +$5</span>
+    <span class="fact">$20 deposit holds your order</span>
+    <span class="fact" id="factDeadline">Orders close Nov 22</span>
+    <span class="fact" id="factReady">Pickup week of Dec 7</span>
+  </div>
+</header>
+
+<div class="steps" aria-hidden="true"></div>
+
+<main class="wrap" id="orderArea">
+  <section>
+    <h2>1. Pick your designs</h2>
+    <p class="sub">Tap “Add mug” for each one you want. You can add the same design more than once.</p>
+    <div class="grid" id="designGrid"></div>
+  </section>
+
+  <section>
+    <div class="layout">
+      <div>
+        <div class="panel">
+          <h3>2. Your mugs</h3>
+          <div id="cart"><p class="empty">No mugs yet. Add a design above.</p></div>
+        </div>
+
+        <form class="panel" id="infoForm" novalidate>
+          <h3>3. Your info</h3>
+          <label class="field">Name
+            <input type="text" name="name" autocomplete="name" required>
+          </label>
+          <label class="field">Phone number <span class="help">I'll text your pickup details here.</span>
+            <input type="tel" name="phone" autocomplete="tel" required>
+          </label>
+          <label class="field">Email <span class="opt">(optional)</span>
+            <input type="email" name="email" autocomplete="email">
+          </label>
+          <label class="field">Instagram or Facebook name <span class="opt">(optional)</span>
+            <input type="text" name="social">
+          </label>
+
+          <fieldset>
+            <legend>How will you get your mugs?</legend>
+            <label class="choice"><input type="radio" name="fulfillment" value="Pickup, week of Dec 7" checked>
+              <span>Pick up the week of Dec 7<br><span class="help">I'll text you the place and time.</span></span></label>
+            <label class="choice"><input type="radio" name="fulfillment" value="Local delivery (Albuquerque)">
+              <span>Local delivery in Albuquerque<br><span class="help">Delivery fee is extra. I'll text you the cost.</span></span></label>
+            <label class="choice"><input type="radio" name="fulfillment" value="Shipping">
+              <span>Shipping<br><span class="help">Shipping is extra. I'll text you the cost before sending.</span></span></label>
+          </fieldset>
+          <label class="field" id="addressField" style="display:none">Shipping address
+            <textarea name="address" rows="3"></textarea>
+          </label>
+
+          <fieldset>
+            <legend>How would you like to pay?</legend>
+            <label class="choice"><input type="radio" name="pay" value="deposit" checked>
+              <span>$20 deposit now, balance at pickup</span></label>
+            <label class="choice"><input type="radio" name="pay" value="full">
+              <span>Pay in full now</span></label>
+          </fieldset>
+          <label class="field">Your Cash App name <span class="help">So I can match your payment to your order.</span>
+            <input type="text" name="cashappName">
+          </label>
+
+          <fieldset>
+            <legend>Is this a gift?</legend>
+            <label class="choice"><input type="radio" name="gift" value="Yes"><span>Yes</span></label>
+            <label class="choice"><input type="radio" name="gift" value="No" checked><span>No</span></label>
+          </fieldset>
+          <label class="field">Anything else I should know? <span class="opt">(optional)</span>
+            <textarea name="notes" rows="3"></textarea>
+          </label>
+
+          <label class="choice"><input type="checkbox" name="agree" required>
+            <span>I understand each mug is hand-painted and unique, and that matching sets will be similar but not identical.</span></label>
+        </form>
+      </div>
+
+      <aside class="panel totals" aria-live="polite">
+        <h3>Your total</h3>
+        <div id="summaryLines"></div>
+        <div class="row big"><span>Total</span><span id="tTotal">$0</span></div>
+        <div class="row due"><span>Pay now</span><span id="tNow">$0</span></div>
+        <div class="row"><span>Due at pickup</span><span id="tLater">$0</span></div>
+        <p class="note" id="shipNote" style="display:none">Delivery or shipping cost is added separately.</p>
+        <button class="btn" id="submitBtn" style="width:100%;margin-top:14px" disabled>Place pre-order</button>
+        <div class="err" id="err"></div>
+        <p class="note">After you submit, you'll get a Cash App link for your payment. Your order is held once the payment comes in.</p>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<main class="wrap done" id="doneArea">
+  <section>
+    <h2>Thank you!</h2>
+    <p>Your order number is</p>
+    <div class="oid" id="doneId"></div>
+    <p>Please pay <strong id="donePay"></strong> on Cash App and put your order number in the note.</p>
+    <a class="btn pay" id="payLink" href="#" target="_blank" rel="noopener">Pay with Cash App</a>
+    <p class="note">Cash App: <strong id="doneTag"></strong></p>
+    <p class="sub" style="margin-top:22px">I'll text you to confirm. <span id="doneReady"></span></p>
+  </section>
+</main>
+
+<div class="steps" aria-hidden="true"></div>
+<footer class="wrap">Questions? Text me. · Every mug is hand-painted and fired with care.</footer>
+<div class="band" aria-hidden="true"></div>
+
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const money = (n) => "$" + n.toFixed(0);
+  const designs = Object.fromEntries(CONFIG.designs.map(d => [d.id, d]));
+  let cart = [];
+  let nextKey = 1;
+
+  // Labels from config
+  $("#factDeadline").textContent = "Orders close " + CONFIG.deadlineLabel.replace(/^\w+, /, "");
+  $("#factReady").textContent = CONFIG.readyLabel.replace("Pickup starts the week of Monday,", "Pickup week of");
+
+  // Closed after deadline
+  const closed = Date.now() > new Date(CONFIG.deadline).getTime();
+  if (closed) { $("#closedBanner").style.display = "block"; }
+
+  // Design cards
+  const grid = $("#designGrid");
+  CONFIG.designs.forEach(d => {
+    const price = CONFIG.basePrice + d.extra;
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="ph"><img alt="${d.title} mug" src="${d.img}" loading="lazy"><div class="fallback" hidden>Photo coming soon</div></div>
+      <div class="body">
+        <h3>${d.title}</h3>
+        <div class="price">${money(price)}${d.extra ? ` <span class="help">(+${money(d.extra)} artist design)</span>` : ""}</div>
+        <div class="blurb">${d.blurb}</div>
+        <button class="btn" type="button" ${closed ? "disabled" : ""}>Add mug</button>
+      </div>`;
+    const img = card.querySelector("img");
+    img.addEventListener("error", () => { img.remove(); card.querySelector(".fallback").hidden = false; });
+    card.querySelector("button").addEventListener("click", () => {
+      cart.push({ key: nextKey++, design: d.id, hasName: false, name: "" });
+      render();
+      const btn = card.querySelector("button");
+      btn.textContent = "Added ✓"; setTimeout(() => btn.textContent = "Add mug", 900);
+    });
+    grid.appendChild(card);
+  });
+
+  function linePrice(item) {
+    return CONFIG.basePrice + designs[item.design].extra + (item.hasName ? CONFIG.nameExtra : 0);
+  }
+  function totals() {
+    const total = cart.reduce((s, i) => s + linePrice(i), 0);
+    const pay = document.querySelector("input[name=pay]:checked").value;
+    const now = cart.length === 0 ? 0 : (pay === "full" ? total : Math.min(CONFIG.deposit, total));
+    return { total, now, later: total - now, pay };
+  }
+
+  function render() {
+    const c = $("#cart");
+    if (!cart.length) { c.innerHTML = '<p class="empty">No mugs yet. Add a design above.</p>'; }
+    else {
+      c.innerHTML = "";
+      cart.forEach((item, idx) => {
+        const d = designs[item.design];
+        const el = document.createElement("div");
+        el.className = "line";
+        el.innerHTML = `
+          <div class="t">Mug ${idx + 1}: ${d.title}</div>
+          <div class="p">${money(linePrice(item))}</div>
+          <div class="opts">
+            <label><input type="checkbox" ${item.hasName ? "checked" : ""}> Add a name (+${money(CONFIG.nameExtra)})</label>
+            <input type="text" maxlength="${CONFIG.nameMaxLength}" placeholder="Name to paint" value="${item.name.replace(/"/g, "&quot;")}" ${item.hasName ? "" : "hidden"} aria-label="Name to paint on mug ${idx + 1}">
+            <button type="button" class="link">Remove</button>
+          </div>`;
+        const [cb, nameInput] = el.querySelectorAll("input");
+        cb.addEventListener("change", () => { item.hasName = cb.checked; render(); });
+        nameInput.addEventListener("input", () => { item.name = nameInput.value; validate(); });
+        el.querySelector(".link").addEventListener("click", () => { cart = cart.filter(x => x.key !== item.key); render(); });
+        c.appendChild(el);
+      });
+      const hint = document.createElement("p");
+      hint.className = "help";
+      hint.textContent = "Names: up to " + CONFIG.nameMaxLength + " letters. Please double-check the spelling!";
+      c.appendChild(hint);
+    }
+    // summary
+    const counts = {};
+    cart.forEach(i => counts[i.design] = (counts[i.design] || 0) + 1);
+    const names = cart.filter(i => i.hasName).length;
+    $("#summaryLines").innerHTML = Object.entries(counts).map(([id, n]) =>
+      `<div class="row"><span>${n} × ${designs[id].title}</span><span>${money(n * (CONFIG.basePrice + designs[id].extra))}</span></div>`
+    ).join("") + (names ? `<div class="row"><span>${names} × custom name</span><span>${money(names * CONFIG.nameExtra)}</span></div>` : "")
+      || '<div class="row help"><span>Add a mug to see your total</span></div>';
+    const t = totals();
+    $("#tTotal").textContent = money(t.total);
+    $("#tNow").textContent = money(t.now);
+    $("#tLater").textContent = money(t.later);
+    validate();
+  }
+
+  const form = $("#infoForm");
+  function problems() {
+    const f = new FormData(form);
+    const p = [];
+    if (!cart.length) p.push("Add at least one mug.");
+    if (cart.some(i => i.hasName && !i.name.trim())) p.push("Type the name to paint, or uncheck “Add a name.”");
+    if (!f.get("name").trim()) p.push("Add your name.");
+    if (f.get("phone").replace(/\D/g, "").length < 10) p.push("Add a phone number so I can text you.");
+    if (f.get("fulfillment") === "Shipping" && !f.get("address").trim()) p.push("Add your shipping address.");
+    if (!f.get("agree")) p.push("Check the box about handmade mugs.");
+    return p;
+  }
+  function validate() { $("#submitBtn").disabled = closed || cart.length === 0; }
+
+  form.addEventListener("change", () => {
+    const ful = form.fulfillment.value;
+    $("#addressField").style.display = ful === "Shipping" ? "block" : "none";
+    $("#shipNote").style.display = ful === "Pickup, week of Dec 7" ? "none" : "block";
+    render();
+  });
+
+  function orderId() {
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    let s = ""; for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return "M-" + s;
+  }
+
+  $("#submitBtn").addEventListener("click", async () => {
+    const err = $("#err");
+    const p = problems();
+    if (p.length) { err.innerHTML = p.join("<br>"); err.style.display = "block"; return; }
+    err.style.display = "none";
+    const f = new FormData(form);
+    const t = totals();
+    const id = orderId();
+    const mugList = cart.map((i, n) => `${n + 1}) ${designs[i.design].title}${i.hasName ? ` — name: "${i.name.trim()}"` : ""} — ${money(linePrice(i))}`).join("\n");
+    const payload = new URLSearchParams({
+      orderId: id,
+      name: f.get("name").trim(), phone: f.get("phone").trim(), email: f.get("email").trim(), social: f.get("social").trim(),
+      mugCount: String(cart.length), mugs: mugList,
+      total: String(t.total), payChoice: t.pay === "full" ? "Paid in full" : "Deposit",
+      dueNow: String(t.now), dueAtPickup: String(t.later),
+      fulfillment: f.get("fulfillment"), address: (f.get("address") || "").trim(),
+      cashappName: f.get("cashappName").trim(), gift: f.get("gift") || "", notes: f.get("notes").trim()
+    });
+    const btn = $("#submitBtn");
+    btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      if (!CONFIG.endpoint) throw new Error("no-endpoint");
+      await fetch(CONFIG.endpoint, { method: "POST", mode: "no-cors", body: payload });
+    } catch (e) {
+      btn.disabled = false; btn.textContent = "Place pre-order";
+      err.innerHTML = e.message === "no-endpoint"
+        ? "The order form isn't connected yet (no endpoint set). Please text me your order instead."
+        : "Something went wrong sending your order. Please try again, or text me your order.";
+      err.style.display = "block";
+      return;
+    }
+    const tag = CONFIG.cashtag.replace(/^\$/, "");
+    $("#doneId").textContent = id;
+    $("#donePay").textContent = money(t.now);
+    $("#doneTag").textContent = "$" + tag;
+    $("#payLink").href = `https://cash.app/$${tag}/${t.now}`;
+    $("#doneReady").textContent = CONFIG.readyLabel + ".";
+    $("#orderArea").style.display = "none";
+    $("#doneArea").style.display = "block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

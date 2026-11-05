@@ -95,6 +95,11 @@
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .group-h { font-size: 17px; margin: 18px 0 10px; letter-spacing: .02em; }
   .group-h:first-of-type { margin-top: 0; }
+  .group-h .by { font-weight: 500; color: var(--muted); }
+  .gtk { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 28px; }
+  @media (max-width: 640px) { .gtk { grid-template-columns: 1fr; } }
+  .gtk h3 { font-size: 16px; margin: 0 0 4px; }
+  .gtk p { margin: 0; color: var(--muted); font-size: 15px; }
   .card { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
   .card .ph { aspect-ratio: 4 / 5; cursor: pointer; background: var(--soft); position: relative; overflow: hidden; }
   .card .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -201,17 +206,14 @@
   <img class="logo" src="images/logo.png" alt="Hand-drawn mug with smiling dinosaurs and a stepped band">
   <div class="kicker">Holiday pre-orders</div>
   <h1>Hand-painted black on white ceramic mugs</h1>
-  <p>Every mug is hand-painted and fired in small batches, so no two are exactly alike. If you order a set, the mugs will share a style but won't be identical. That's part of what makes them handmade.</p>
-  <p style="margin-top:10px"><strong>Care:</strong> Food safe for coffee, tea and other drinks. Hand-wash only.</p>
+  <p>Hand-painted and fired in small batches. Every mug is one of a kind.</p>
   <div class="facts">
     <span class="fact">16 oz · $30</span>
-    <span class="fact">Custom name +$5</span>
-    <span class="fact">2 mugs: save $5 · 4 mugs: save $20</span>
-    <span class="fact">50% deposit holds your order</span>
-    <span class="fact">Food safe · hand-wash only</span>
+    <span class="fact">Save on 2 or 4</span>
     <span class="fact" id="factDeadline">Orders close Nov 22</span>
     <span class="fact" id="factReady">Pickup week of Dec 7</span>
   </div>
+  <p class="help" style="margin-top:12px"><a href="#goodToKnow" style="color:inherit">Care, deposit &amp; details ↓</a></p>
   <div class="update-box">
     <button type="button" class="link" id="updateToggle">Already ordered and need to change it?</button>
     <div class="update-form" id="updateForm">
@@ -229,7 +231,7 @@
   <section>
     <h2>1. Pick your designs</h2>
     <p class="sub">Tap “Add mug” for each one you want. You can add the same design more than once.</p>
-    <h3 class="group-h">Dinosaur mugs</h3>
+    <h3 class="group-h">Dinosaur mugs <span class="by">by William Andrew Pacheco</span></h3>
     <div class="grid" id="designGrid"></div>
     <h3 class="group-h">Designed by guest artists</h3>
     <div class="grid" id="artistGrid"></div>
@@ -330,6 +332,20 @@
     <button type="button" class="btn ghost again" id="againBtn">Place another order</button>
   </section>
 </main>
+
+<section class="wrap" id="goodToKnow" style="padding-top:8px">
+  <div class="panel">
+    <h2 style="font-size:24px;margin-bottom:14px">Good to know</h2>
+    <div class="gtk">
+      <div><h3>Handmade, one of a kind</h3><p>Every mug is hand-painted and fired in small batches, so no two are exactly alike. If you order a set, the mugs will share a style but won't be identical.</p></div>
+      <div><h3>Care</h3><p>Food safe for coffee, tea and other drinks. Hand-wash only.</p></div>
+      <div><h3>Size &amp; price</h3><p>All mugs are 16 oz and $30. Robert Tenorio designs are $40. Add a custom name for $5.</p></div>
+      <div><h3>Deals</h3><p>Save $5 on 2 mugs or $20 on 4. Or pay in full and save $2 per mug. Discounts don't combine; you automatically get the bigger one.</p></div>
+      <div><h3>Deposit</h3><p>50% of your total (at least $20) holds your order. The rest is due at pickup. Pay with Cash App ($WillPachecoClay).</p></div>
+      <div><h3>Dates</h3><p>Orders close Sunday, Nov 22. Mugs are ready starting the week of Dec 7. I'll email you to arrange pickup or delivery.</p></div>
+    </div>
+  </div>
+</section>
 
 <dialog id="reviewDlg" aria-labelledby="reviewTitle">
   <div class="dlg">

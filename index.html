@@ -241,8 +241,8 @@
           <label class="field">Email <span class="help">I'll send your order details and pickup info here.</span>
             <input type="email" name="email" autocomplete="email" required>
           </label>
-          <label class="field">Facebook or Instagram name <span class="help">So I can message you.</span>
-            <input type="text" name="social" required>
+          <label class="field">Facebook or Instagram name <span class="opt">(optional)</span> <span class="help">If you'd also like me to message you there.</span>
+            <input type="text" name="social">
           </label>
           <label class="field">Phone number <span class="opt">(optional)</span>
             <input type="tel" name="phone" autocomplete="tel">
@@ -470,7 +470,6 @@
     if (cart.some(i => i.hasName && !i.name.trim())) p.push("Type the name to paint, or uncheck “Add a name.”");
     if (!f.get("name").trim()) p.push("Add your name.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.get("email").trim())) p.push("Add your email address.");
-    if (!f.get("social").trim()) p.push("Add your Facebook or Instagram name so I can message you.");
     if (f.get("fulfillment") === "Shipping" && !f.get("address").trim()) p.push("Add your shipping address.");
     if (!f.get("agree")) p.push("Check the box about handmade mugs.");
     return p;
@@ -535,7 +534,7 @@
         <div class="row"><span>Pay now (Cash App)</span><strong>${money(t.now)}</strong></div>
         <div class="row"><span>Due at pickup</span><span>${money(t.later)}</span></div></div>
       <div class="block"><div class="label">Your info</div>
-        ${esc(data.name)} · ${esc(data.email)} · ${esc(data.social)}${data.phone ? " · " + esc(data.phone) : ""}</div>
+        ${esc(data.name)} · ${esc(data.email)}${data.social ? " · " + esc(data.social) : ""}${data.phone ? " · " + esc(data.phone) : ""}</div>
       <div class="block"><div class="label">Getting your mugs</div>
         ${esc(data.fulfillment)}${data.address ? "<br>" + esc(data.address).replace(/\n/g, "<br>") : ""}</div>`;
     $("#sendErr").style.display = "none";

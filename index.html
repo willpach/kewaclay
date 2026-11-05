@@ -26,15 +26,15 @@
     bundles: [ { size: 4, off: 20, label: "4-mug set" }, { size: 2, off: 5, label: "2-mug pair" } ],
     nameMaxLength: 12,
     designs: [
-      { id: "dinosaur",  title: "Dinosaur",                  extra: 0,  imgs: ["images/dinosaur.jpg"],
+      { group: "dino", id: "dinosaur",  title: "Dinosaur",                  extra: 0,  imgs: ["images/dinosaur.jpg"],
         blurb: "Just dinosaurs: one or more smiling dinosaurs around the mug. The number and placement vary." },
-      { id: "dinopueblo", title: "Dinosaur with Mesa Verde / Pueblo designs", extra: 0, imgs: ["images/dino-mesaverde.jpg"],
+      { group: "dino", id: "dinopueblo", title: "Dinosaur with Mesa Verde / Pueblo designs", extra: 0, imgs: ["images/dino-mesaverde.jpg"],
         blurb: "Smiling dinosaurs with Mesa Verde and Pueblo-inspired stepped bands and lines. Designs vary." },
-      { id: "dinogreek",  title: "Dinosaur with Greek-inspired designs", extra: 0, imgs: ["images/dino-greek.jpg"],
+      { group: "dino", id: "dinogreek",  title: "Dinosaur with Greek-inspired designs", extra: 0, imgs: ["images/dino-greek.jpg"],
         blurb: "Smiling dinosaurs with Greek-inspired leaf panels and banding. Designs vary." },
-      { id: "robert",    title: "Designed by Robert Tenorio", extra: 10, imgs: ["images/robert.jpg"],
+      { group: "artist", id: "robert",    title: "Designed by Robert Tenorio", extra: 10, imgs: ["images/robert.jpg"],
         blurb: "Robert chooses the design, so each mug is one of a kind." },
-      { id: "rose",      title: "Designed by Rose Pacheco",   extra: 0,  imgs: ["images/rose.jpg"],
+      { group: "artist", id: "rose",      title: "Designed by Rose Pacheco",   extra: 0,  imgs: ["images/rose.jpg"],
         blurb: "Each mug is hand-painted and one of a kind." }
     ]
   };
@@ -84,7 +84,9 @@
   h2 { font-family: Georgia, "Times New Roman", serif; font-size: 28px; margin: 0 0 6px; }
   .sub { color: var(--muted); margin: 0 0 18px; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .group-h { font-size: 17px; margin: 18px 0 10px; letter-spacing: .02em; }
+  .group-h:first-of-type { margin-top: 0; }
   .card { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
   .card .ph { aspect-ratio: 4 / 5; cursor: pointer; background: var(--soft); position: relative; overflow: hidden; }
   .card .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -208,7 +210,10 @@
   <section>
     <h2>1. Pick your designs</h2>
     <p class="sub">Tap “Add mug” for each one you want. You can add the same design more than once.</p>
+    <h3 class="group-h">Dinosaur mugs</h3>
     <div class="grid" id="designGrid"></div>
+    <h3 class="group-h">Designed by guest artists</h3>
+    <div class="grid" id="artistGrid"></div>
   </section>
 
   <section>
@@ -368,7 +373,7 @@
       const btn = card.querySelector("button");
       btn.textContent = "Added ✓"; setTimeout(() => btn.textContent = "Add mug", 900);
     });
-    grid.appendChild(card);
+    (d.group === "artist" ? $("#artistGrid") : grid).appendChild(card);
   });
 
   function linePrice(item) {

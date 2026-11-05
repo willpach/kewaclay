@@ -35,7 +35,11 @@
       { group: "artist", id: "robert",    title: "Designed by Robert Tenorio", extra: 10, imgs: ["images/robert.jpg"],
         blurb: "Robert chooses the design, so each mug is one of a kind." },
       { group: "artist", id: "rose",      title: "Designed by Rose Pacheco",   extra: 0,  imgs: ["images/rose.jpg"],
-        blurb: "Each mug is hand-painted and one of a kind." }
+        blurb: "Each mug is hand-painted and one of a kind." },
+      { group: "pattern", id: "mesaverde", title: "Mesa Verde–inspired", extra: 0, imgs: ["images/mesaverde.jpg"],
+        blurb: "No dinosaurs: stepped, hatched and geometric Mesa Verde–inspired patterns. Designs will vary." },
+      { group: "pattern", id: "greek", title: "Greek-inspired", extra: 0, imgs: ["images/greek.jpg"],
+        blurb: "No dinosaurs: leaves, vines, spirals and wave bands. Designs will vary." }
     ]
   };
 </script>
@@ -224,6 +228,8 @@
     <div class="grid" id="designGrid"></div>
     <h3 class="group-h">Designed by guest artists</h3>
     <div class="grid" id="artistGrid"></div>
+    <h3 class="group-h">Pattern mugs (no dinosaurs)</h3>
+    <div class="grid" id="patternGrid"></div>
   </section>
 
   <section>
@@ -391,7 +397,7 @@
       const btn = card.querySelector("button");
       btn.textContent = "Added ✓"; setTimeout(() => btn.textContent = "Add mug", 900);
     });
-    (d.group === "artist" ? $("#artistGrid") : grid).appendChild(card);
+    ({ artist: $("#artistGrid"), pattern: $("#patternGrid") }[d.group] || grid).appendChild(card);
   });
 
   function linePrice(item) {

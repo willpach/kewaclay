@@ -26,13 +26,14 @@
     bundles: [ { size: 4, off: 20, label: "4-mug set" }, { size: 2, off: 5, label: "2-mug pair" } ],
     nameMaxLength: 12,
     designs: [
-      { id: "dinosaur",  title: "Dinosaur",                  extra: 0,  img: "images/dinosaur.jpg",
-        blurb: "One or more smiling dinosaurs. The number and placement vary from mug to mug." },
-      { id: "mesaverde", title: "Mesa Verde–inspired",       extra: 0,  img: "images/mesaverde.jpg",
-        blurb: "Stepped and geometric designs inspired by Mesa Verde pottery. Patterns vary." },
-      { id: "robert",    title: "Designed by Robert Tenorio", extra: 10, img: "images/robert.jpg",
+      { id: "dinosaur",  title: "Dinosaur",                  extra: 0,  imgs: ["images/dinosaur.jpg"],
+        blurb: "Just dinosaurs: one or more smiling dinosaurs wrapped around the mug. The number and placement vary." },
+      { id: "dinodesign", title: "Dinosaur with Mesa Verde & Greek-inspired designs", extra: 0,
+        imgs: ["images/dino-mesaverde.jpg", "images/dino-greek.jpg"],
+        blurb: "Smiling dinosaurs framed with Mesa Verde–inspired stepped bands or Greek-inspired leaf panels. Designs vary." },
+      { id: "robert",    title: "Designed by Robert Tenorio", extra: 10, imgs: ["images/robert.jpg"],
         blurb: "Robert chooses the design, so each mug is one of a kind." },
-      { id: "rose",      title: "Designed by Rose Pacheco",   extra: 0,  img: "images/rose.jpg",
+      { id: "rose",      title: "Designed by Rose Pacheco",   extra: 0,  imgs: ["images/rose.jpg"],
         blurb: "Each mug is hand-painted and one of a kind." }
     ]
   };
@@ -84,8 +85,13 @@
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
   .card { background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
-  .card .ph { aspect-ratio: 1 / 1; background: var(--soft); position: relative; overflow: hidden; }
+  .card .ph { aspect-ratio: 4 / 5; cursor: pointer; background: var(--soft); position: relative; overflow: hidden; }
   .card .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .ph .dots { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+  .card .ph .dots span { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.6); border: 1px solid rgba(0,0,0,.4); }
+  .card .ph .dots span.on { background: #fff; border-color: #000; }
+  .card .ph .hint { position: absolute; top: 8px; right: 8px; background: rgba(20,20,20,.7); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+  .card .ph .fallback[hidden] { display: none; }
   .card .ph .fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: 13px; padding: 12px; }
   .card .body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
   .card h3 { margin: 0; font-size: 17px; line-height: 1.25; }
@@ -336,7 +342,8 @@
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
-      <div class="ph"><img alt="${d.title} mug" src="${d.img}" loading="lazy"><div class="fallback" hidden>Photo coming soon</div></div>
+      <div class="ph"><img alt="${d.title} mug" src="${d.imgs[0]}" loading="lazy"><div class="fallback" hidden>Photo coming soon</div>
+        ${d.imgs.length > 1 ? `<span class="hint">1 / ${d.imgs.length}</span><div class="dots">${d.imgs.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}</div>
       <div class="body">
         <h3>${d.title}</h3>
         <div class="price">${money(price)}${d.extra ? ` <span class="help">(+${money(d.extra)} artist design)</span>` : ""}</div>
@@ -344,7 +351,16 @@
         <button class="btn" type="button" ${closed ? "disabled" : ""}>Add mug</button>
       </div>`;
     const img = card.querySelector("img");
-    img.addEventListener("error", () => { img.remove(); card.querySelector(".fallback").hidden = false; });
+    img.addEventListener("error", () => { img.style.display = "none"; card.querySelector(".fallback").hidden = false; });
+    if (d.imgs.length > 1) {
+      let k = 0;
+      card.querySelector(".ph").addEventListener("click", () => {
+        k = (k + 1) % d.imgs.length; img.style.display = ""; card.querySelector(".fallback").hidden = true;
+        img.src = d.imgs[k];
+        card.querySelectorAll(".dots span").forEach((el, i) => el.classList.toggle("on", i === k));
+        card.querySelector(".hint").textContent = `${k + 1} / ${d.imgs.length}`;
+      });
+    }
     card.querySelector("button").addEventListener("click", () => {
       cart.push({ key: nextKey++, design: d.id, hasName: false, name: "" });
       render();

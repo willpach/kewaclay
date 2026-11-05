@@ -18,7 +18,8 @@
     readyLabel: "Pickup starts the week of Monday, Dec 7",
     basePrice: 30,
     nameExtra: 5,
-    deposit: 20,
+    depositPercent: 50,                // deposit = this % of the order total, rounded up to the dollar
+    depositMin: 20,                    // ...but never less than this
     fullPayDiscountPerMug: 2,          // $ off each mug when paid in full now
     // Multi-mug deals: each set of 4 saves $20 (4 for $100), each pair saves $5 (2 for $55).
     // Discounts don't combine: buyers automatically get whichever saves them more.
@@ -173,11 +174,13 @@
   <div class="kicker">Holiday pre-orders</div>
   <h1>Hand-painted black &amp; white mugs</h1>
   <p>Every mug is hand-painted and fired in small batches, so no two are exactly alike. If you order a set, the mugs will share a style but won't be identical. That's part of what makes them handmade.</p>
+  <p style="margin-top:10px"><strong>Care:</strong> Food safe for coffee, tea and other drinks. Hand-wash only.</p>
   <div class="facts">
     <span class="fact">16 oz · $30</span>
     <span class="fact">Custom name +$5</span>
     <span class="fact">2 mugs: save $5 · 4 mugs: save $20</span>
-    <span class="fact">$20 deposit holds your order</span>
+    <span class="fact">50% deposit holds your order</span>
+    <span class="fact">Food safe · hand-wash only</span>
     <span class="fact" id="factDeadline">Orders close Nov 22</span>
     <span class="fact" id="factReady">Pickup week of Dec 7</span>
   </div>
@@ -240,7 +243,7 @@
           <fieldset>
             <legend>How would you like to pay?</legend>
             <label class="choice"><input type="radio" name="pay" value="deposit" checked>
-              <span>$20 deposit now, balance at pickup</span></label>
+              <span>Half now (deposit), half at pickup <strong id="depositLabel"></strong><br><span class="help">50% of your total, at least $20.</span></span></label>
             <label class="choice"><input type="radio" name="pay" value="full">
               <span>Pay in full now <strong id="fullSaveLabel"></strong></span></label>
           </fieldset>
@@ -258,7 +261,7 @@
           </label>
 
           <label class="choice"><input type="checkbox" name="agree" required>
-            <span>I understand each mug is hand-painted and unique, and that matching sets will be similar but not identical.</span></label>
+            <span>I understand each mug is hand-painted and unique, and that matching sets will be similar but not identical. Mugs are food safe and hand-wash only.</span></label>
         </form>
       </div>
 
@@ -307,7 +310,7 @@
 </dialog>
 
 <div class="steps" aria-hidden="true"></div>
-<footer class="wrap">Questions? Text me. · Every mug is hand-painted and fired with care.</footer>
+<footer class="wrap">Questions? Text me. · Every mug is hand-painted and fired with care. Food safe · hand-wash only.</footer>
 <div class="band" aria-hidden="true"></div>
 
 <script>
@@ -364,7 +367,7 @@
     const discount = useBundle ? bundleOff : fullOff;
     const discountLabel = !discount ? "" : useBundle ? `Multi-mug discount (${sets.join(" + ")})` : "Paid-in-full discount";
     const total = subtotal - discount;
-    const now = cart.length === 0 ? 0 : (pay === "full" ? total : Math.min(CONFIG.deposit, total));
+    const now = cart.length === 0 ? 0 : (pay === "full" ? total : Math.min(total, Math.max(CONFIG.depositMin, Math.ceil(total * CONFIG.depositPercent / 100))));
     return { subtotal, discount, discountLabel, total, now, later: total - now, pay, bundleOff };
   }
 
@@ -406,6 +409,8 @@
     ).join("") + (names ? `<div class="row"><span>${names} × custom name</span><span>${money(names * CONFIG.nameExtra)}</span></div>` : "")
       + (t.discount ? `<div class="row discount"><span>${t.discountLabel}</span><span>−${money(t.discount)}</span></div>` : ""))
       || '<div class="row help"><span>Add a mug to see your total</span></div>';
+    { const sub = t.subtotal - (t.bundleOff || 0); const dep = cart.length ? Math.min(sub, Math.max(CONFIG.depositMin, Math.ceil(sub * CONFIG.depositPercent / 100))) : 0;
+      $("#depositLabel").textContent = cart.length ? "— " + money(dep) + " now" : ""; }
     const pifOff = cart.length * CONFIG.fullPayDiscountPerMug;
     $("#fullSaveLabel").textContent = (t.bundleOff && t.bundleOff >= pifOff)
       ? "— your multi-mug discount is already bigger"

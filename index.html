@@ -154,6 +154,7 @@
   .done .oid { font-size: 28px; font-weight: 800; letter-spacing: .06em; border: 2px dashed var(--ink); display: inline-block; padding: 6px 16px; border-radius: 10px; margin: 8px 0 14px; }
   .done .pay { display: inline-block; margin: 6px; text-decoration: none; }
 
+  footer a, .note a { color: inherit; font-weight: 600; }
   footer { padding: 30px 0 40px; text-align: center; color: var(--muted); font-size: 14px; }
 
   .row.discount { color: var(--ok); font-weight: 600; }
@@ -297,6 +298,7 @@
         <button class="btn" id="submitBtn" style="width:100%;margin-top:14px" disabled>Review order</button>
         <div class="err" id="err"></div>
         <p class="note">After you submit, you'll get a Cash App link for your payment. Your order is held once the payment comes in.</p>
+        <p class="note">Questions? Email me: <a href="mailto:kewaeats@gmail.com?subject=Mug%20order%20question">kewaeats@gmail.com</a></p>
       </aside>
     </div>
   </section>
@@ -313,6 +315,7 @@
     <p class="sub" style="margin-top:22px">I'll email or message you to confirm. <span id="doneReady"></span></p>
     <p class="note" id="doneUpdateNote" style="display:none"></p>
     <p class="note">Need to change it later? Use “Already ordered and need to change it?” at the top of this page with your order number.</p>
+    <p class="note">Questions? Email me: <a href="mailto:kewaeats@gmail.com?subject=Mug%20order%20question">kewaeats@gmail.com</a></p>
     <button type="button" class="btn ghost again" id="againBtn">Place another order</button>
   </section>
 </main>
@@ -337,7 +340,7 @@
   </div>
 </div>
 <div class="steps" aria-hidden="true"></div>
-<footer class="wrap">Questions? Message me on Facebook. · Every mug is hand-painted and fired with care. Food safe · hand-wash only.</footer>
+<footer class="wrap">Questions? Email me: <a href="mailto:kewaeats@gmail.com?subject=Mug%20order%20question">kewaeats@gmail.com</a> · Every mug is hand-painted and fired with care. Food safe · hand-wash only.</footer>
 <div class="band" aria-hidden="true"></div>
 
 <script>
@@ -554,8 +557,8 @@
     } catch (e) {
       btn.disabled = false; btn.textContent = replacing ? "Send updated order" : "Place pre-order";
       err.innerHTML = e.message === "no-endpoint"
-        ? "The order form isn't connected yet. Please message me your order on Facebook instead."
-        : "Something went wrong sending your order. Please try again, or message me your order on Facebook.";
+        ? "The order form isn't connected yet. Please email your order to kewaeats@gmail.com instead."
+        : "Something went wrong sending your order. Please try again, or email your order to kewaeats@gmail.com.";
       err.style.display = "block";
       return;
     }

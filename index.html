@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hand-painted black on white ceramic mugs · Pre-orders</title>
+<link rel="icon" type="image/png" href="images/favicon.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <meta name="description" content="Holiday pre-orders for hand-painted black on white ceramic mugs. Orders close Nov 22.">
 <script>
   /* ============================================================
@@ -75,7 +77,9 @@
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='18'%3E%3Cpath d='M0 18V12H6V6H12V0H24V6H30V12H36V18Z' fill='%23141414'/%3E%3C/svg%3E") repeat-x;
   }
 
-  header { padding: 44px 0 28px; text-align: center; }
+  header { padding: 34px 0 28px; text-align: center; }
+  header .logo { display: block; width: 150px; height: auto; margin: 0 auto 14px; }
+  @media (max-width: 520px) { header .logo { width: 120px; } }
   header .kicker { letter-spacing: .18em; text-transform: uppercase; font-size: 13px; color: var(--muted); font-weight: 600; }
   header h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(32px, 6vw, 52px); line-height: 1.08; margin: 10px 0 14px; }
   header p { max-width: 620px; margin: 0 auto; color: var(--muted); }
@@ -194,6 +198,7 @@
 <div class="closed-banner" id="closedBanner">Pre-orders are closed for this round. Thank you! Look for me at upcoming markets.</div>
 
 <header class="wrap">
+  <img class="logo" src="images/logo.png" alt="Hand-drawn mug with smiling dinosaurs and a stepped band">
   <div class="kicker">Holiday pre-orders</div>
   <h1>Hand-painted black on white ceramic mugs</h1>
   <p>Every mug is hand-painted and fired in small batches, so no two are exactly alike. If you order a set, the mugs will share a style but won't be identical. That's part of what makes them handmade.</p>

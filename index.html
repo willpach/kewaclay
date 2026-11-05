@@ -173,6 +173,15 @@
   .dlg ul { margin: 0; padding-left: 18px; }
   .dlg .actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
   .done .again { margin-top: 18px; }
+  .floatbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--ink); color: #fff;
+    transform: translateY(110%); transition: transform .25s ease; box-shadow: 0 -6px 20px rgba(0,0,0,.18); }
+  .floatbar.show { transform: none; }
+  .floatbar .in { max-width: 980px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+  .floatbar .sum { flex: 1; line-height: 1.3; }
+  .floatbar .sum b { font-size: 19px; }
+  .floatbar .sum small { display: block; opacity: .8; font-size: 13px; }
+  .floatbar .btn { background: #fff; color: var(--ink); white-space: nowrap; }
+  body.has-bar { padding-bottom: 78px; }
 </style>
 </head>
 <body>
@@ -229,24 +238,24 @@
           <label class="field">Name
             <input type="text" name="name" autocomplete="name" required>
           </label>
-          <label class="field">Phone number <span class="help">I'll text your pickup details here.</span>
-            <input type="tel" name="phone" autocomplete="tel" required>
+          <label class="field">Email <span class="help">I'll send your order details and pickup info here.</span>
+            <input type="email" name="email" autocomplete="email" required>
           </label>
-          <label class="field">Email <span class="opt">(optional)</span>
-            <input type="email" name="email" autocomplete="email">
+          <label class="field">Facebook or Instagram name <span class="help">So I can message you.</span>
+            <input type="text" name="social" required>
           </label>
-          <label class="field">Instagram or Facebook name <span class="opt">(optional)</span>
-            <input type="text" name="social">
+          <label class="field">Phone number <span class="opt">(optional)</span>
+            <input type="tel" name="phone" autocomplete="tel">
           </label>
 
           <fieldset>
             <legend>How will you get your mugs?</legend>
             <label class="choice"><input type="radio" name="fulfillment" value="Pickup — arrange when ready" checked>
-              <span>Pick up when it's ready<br><span class="help">Mugs are ready starting the week of Dec 7. I'll text you to arrange a time and place.</span></span></label>
+              <span>Pick up when it's ready<br><span class="help">Mugs are ready starting the week of Dec 7. I'll message you to arrange a time and place.</span></span></label>
             <label class="choice"><input type="radio" name="fulfillment" value="Local delivery (Santo Domingo Pueblo)">
-              <span>Local delivery in Santo Domingo Pueblo<br><span class="help">I'll text you to set up a delivery time.</span></span></label>
+              <span>Local delivery in Santo Domingo Pueblo<br><span class="help">I'll message you to set up a delivery time.</span></span></label>
             <label class="choice"><input type="radio" name="fulfillment" value="Shipping">
-              <span>Shipping<br><span class="help">Shipping is extra. I'll text you the cost before sending.</span></span></label>
+              <span>Shipping<br><span class="help">Shipping is extra. I'll message you the cost before sending.</span></span></label>
           </fieldset>
           <label class="field" id="addressField" style="display:none">Shipping address
             <textarea name="address" rows="3"></textarea>
@@ -301,7 +310,7 @@
     <p>Please pay <strong id="donePay"></strong> on Cash App and put your order number in the note.</p>
     <a class="btn pay" id="payLink" href="#" target="_blank" rel="noopener">Pay with Cash App</a>
     <p class="note">Cash App: <strong id="doneTag"></strong></p>
-    <p class="sub" style="margin-top:22px">I'll text you to confirm. <span id="doneReady"></span></p>
+    <p class="sub" style="margin-top:22px">I'll email or message you to confirm. <span id="doneReady"></span></p>
     <p class="note" id="doneUpdateNote" style="display:none"></p>
     <p class="note">Need to change it later? Use “Already ordered and need to change it?” at the top of this page with your order number.</p>
     <button type="button" class="btn ghost again" id="againBtn">Place another order</button>
@@ -321,8 +330,14 @@
   </div>
 </dialog>
 
+<div class="floatbar" id="floatBar" aria-live="polite">
+  <div class="in">
+    <div class="sum"><b id="fbTotal">$0</b> · <span id="fbCount">0 mugs</span><small id="fbNow"></small></div>
+    <button type="button" class="btn" id="fbGo">Checkout</button>
+  </div>
+</div>
 <div class="steps" aria-hidden="true"></div>
-<footer class="wrap">Questions? Text me. · Every mug is hand-painted and fired with care. Food safe · hand-wash only.</footer>
+<footer class="wrap">Questions? Message me on Facebook. · Every mug is hand-painted and fired with care. Food safe · hand-wash only.</footer>
 <div class="band" aria-hidden="true"></div>
 
 <script>
@@ -438,6 +453,10 @@
       ? "— your multi-mug discount is already bigger"
       : "— save " + money(CONFIG.fullPayDiscountPerMug) + " per mug" + (cart.length > 1 ? ` (${money(pifOff)})` : "");
     $("#tTotal").textContent = money(t.total);
+    $("#fbTotal").textContent = money(t.total);
+    $("#fbCount").textContent = cart.length + (cart.length === 1 ? " mug" : " mugs") + (t.discount ? ` · saved ${money(t.discount)}` : "");
+    $("#fbNow").textContent = cart.length ? `Pay now ${money(t.now)} · at pickup ${money(t.later)}` : "";
+    updateBar();
     $("#tNow").textContent = money(t.now);
     $("#tLater").textContent = money(t.later);
     validate();
@@ -450,7 +469,8 @@
     if (!cart.length) p.push("Add at least one mug.");
     if (cart.some(i => i.hasName && !i.name.trim())) p.push("Type the name to paint, or uncheck “Add a name.”");
     if (!f.get("name").trim()) p.push("Add your name.");
-    if (f.get("phone").replace(/\D/g, "").length < 10) p.push("Add a phone number so I can text you.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.get("email").trim())) p.push("Add your email address.");
+    if (!f.get("social").trim()) p.push("Add your Facebook or Instagram name so I can message you.");
     if (f.get("fulfillment") === "Shipping" && !f.get("address").trim()) p.push("Add your shipping address.");
     if (!f.get("agree")) p.push("Check the box about handmade mugs.");
     return p;
@@ -515,7 +535,7 @@
         <div class="row"><span>Pay now (Cash App)</span><strong>${money(t.now)}</strong></div>
         <div class="row"><span>Due at pickup</span><span>${money(t.later)}</span></div></div>
       <div class="block"><div class="label">Your info</div>
-        ${esc(data.name)} · ${esc(data.phone)}${data.email ? " · " + esc(data.email) : ""}</div>
+        ${esc(data.name)} · ${esc(data.email)} · ${esc(data.social)}${data.phone ? " · " + esc(data.phone) : ""}</div>
       <div class="block"><div class="label">Getting your mugs</div>
         ${esc(data.fulfillment)}${data.address ? "<br>" + esc(data.address).replace(/\n/g, "<br>") : ""}</div>`;
     $("#sendErr").style.display = "none";
@@ -535,8 +555,8 @@
     } catch (e) {
       btn.disabled = false; btn.textContent = replacing ? "Send updated order" : "Place pre-order";
       err.innerHTML = e.message === "no-endpoint"
-        ? "The order form isn't connected yet. Please text me your order instead."
-        : "Something went wrong sending your order. Please try again, or text me your order.";
+        ? "The order form isn't connected yet. Please message me your order on Facebook instead."
+        : "Something went wrong sending your order. Please try again, or message me your order on Facebook.";
       err.style.display = "block";
       return;
     }
@@ -551,10 +571,11 @@
     const note = $("#doneUpdateNote");
     if (replacing) {
       note.style.display = "block";
-      note.innerHTML = `This replaces order <strong>${esc(replacing)}</strong>. <strong>Already paid for that order? Don't pay again</strong>; I'll text you if you owe more or I owe you back.`;
+      note.innerHTML = `This replaces order <strong>${esc(replacing)}</strong>. <strong>Already paid for that order? Don't pay again</strong>; I'll message you if you owe more or I owe you back.`;
     } else { note.style.display = "none"; }
     $("#orderArea").style.display = "none";
     $("#doneArea").style.display = "block";
+    updateBar();
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
@@ -598,6 +619,20 @@
     document.querySelector("#designGrid").scrollIntoView({ behavior: "smooth" });
   });
   if (closed) $("#updateToggle").style.display = "none";
+
+  // Floating total bar: shows once there are mugs, hides when the full total panel is on screen
+  let panelVisible = false;
+  function updateBar() {
+    const show = cart.length > 0 && !panelVisible && $("#orderArea").style.display !== "none";
+    $("#floatBar").classList.toggle("show", show);
+    document.body.classList.toggle("has-bar", cart.length > 0);
+  }
+  new IntersectionObserver(es => { panelVisible = es[0].isIntersecting; updateBar(); }, { threshold: 0.6 }).observe(document.querySelector(".totals"));
+  $("#fbGo").addEventListener("click", () => {
+    const first = problems().find(x => !/mug/i.test(x) || /name to paint/.test(x));
+    const target = first ? $("#infoForm") : document.querySelector(".totals");
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   render();
 })();

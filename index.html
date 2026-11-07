@@ -202,7 +202,7 @@
 </head>
 <body>
 <div class="band" aria-hidden="true"></div>
-<div class="closed-banner" id="closedBanner">This round of mugs is sold out. Thank you so much! Check back soon for the next round, or email kewaeats@gmail.com to get on the list.</div>
+<div class="closed-banner" id="closedBanner">This round of mugs is sold out. Thank you so much! <a href="#waitlist" style="color:#fff">Join the waitlist</a> and I'll email you when the next round opens.</div>
 
 <header class="wrap">
   <img class="logo" src="images/logo.png" alt="Hand-drawn mug with smiling dinosaurs and a stepped band">
@@ -242,7 +242,7 @@
     <div class="grid" id="patternGrid"></div>
   </section>
 
-  <section>
+  <section id="orderSection">
     <div class="layout">
       <div>
         <div class="panel">
@@ -317,6 +317,46 @@
         <p class="note">Questions? Email me: <a href="mailto:kewaeats@gmail.com?subject=Mug%20order%20question">kewaeats@gmail.com</a></p>
       </aside>
     </div>
+  </section>
+
+  <section id="waitlist" style="display:none">
+    <form class="panel" id="waitForm" novalidate style="max-width:640px;margin:0 auto">
+      <div id="waitBody">
+        <h2 style="font-size:26px">Join the waitlist</h2>
+        <p class="sub">This round is sold out. Tell me what you'd like and I'll email you first when the next round opens. No payment now.</p>
+        <label class="field">Name
+          <input type="text" name="wName" autocomplete="name" required>
+        </label>
+        <label class="field">Email <span class="help">I'll email you when orders open.</span>
+          <input type="email" name="wEmail" autocomplete="email" required>
+        </label>
+        <label class="field">Phone <span class="opt">(optional)</span>
+          <input type="tel" name="wPhone" autocomplete="tel">
+        </label>
+        <fieldset>
+          <legend>Which designs are you interested in? <span class="opt" style="font-weight:400">(pick any)</span></legend>
+          <div id="waitDesigns"></div>
+        </fieldset>
+        <label class="field">About how many mugs?
+          <input type="text" name="wCount" inputmode="numeric" placeholder="e.g. 2">
+        </label>
+        <fieldset>
+          <legend>Size</legend>
+          <label class="choice"><input type="radio" name="wSize" value="16 oz" checked><span>16 oz</span></label>
+          <label class="choice"><input type="radio" name="wSize" value="12 oz"><span>12 oz (if offered)</span></label>
+          <label class="choice"><input type="radio" name="wSize" value="Either"><span>Either is fine</span></label>
+        </fieldset>
+        <label class="field">Anything else? <span class="opt">(optional)</span>
+          <textarea name="wNotes" rows="3" placeholder="Names to paint, gift dates, questions…"></textarea>
+        </label>
+        <button class="btn" type="button" id="waitBtn" style="width:100%">Join the waitlist</button>
+        <div class="err" id="waitErr"></div>
+      </div>
+      <div id="waitDone" style="display:none;text-align:center">
+        <h2 style="font-size:26px">You're on the list!</h2>
+        <p class="sub" style="margin:0">Thank you. I'll email you as soon as the next round opens. Questions? Email me: <a href="mailto:kewaeats@gmail.com?subject=Mug%20waitlist%20question">kewaeats@gmail.com</a></p>
+      </div>
+    </form>
   </section>
 </main>
 
@@ -402,7 +442,7 @@
         <h3>${d.title}</h3>
         <div class="price">${money(price)}${d.extra ? ` <span class="help">(+${money(d.extra)} artist design)</span>` : ""}</div>
         <div class="blurb">${d.blurb}</div>
-        <button class="btn" type="button" ${closed ? "disabled" : ""}>${closed ? "Sold out" : "Add mug"}</button>
+        <button class="btn${closed ? " ghost" : ""}" type="button">${closed ? "Sold out · Join waitlist" : "Add mug"}</button>
       </div>`;
     const img = card.querySelector("img");
     img.addEventListener("error", () => { img.style.display = "none"; card.querySelector(".fallback").hidden = false; });
@@ -416,6 +456,12 @@
       });
     }
     card.querySelector("button").addEventListener("click", () => {
+      if (closed) {
+        const cb = document.querySelector(`#waitDesigns input[value="${d.title}"]`);
+        if (cb) cb.checked = true;
+        $("#waitlist").scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       cart.push({ key: nextKey++, design: d.id, hasName: false, name: "" });
       render();
       const btn = card.querySelector("button");
@@ -651,6 +697,37 @@
     document.querySelector("#designGrid").scrollIntoView({ behavior: "smooth" });
   });
   if (closed) $("#updateToggle").style.display = "none";
+
+  // Waitlist (shown when this round is closed)
+  $("#waitDesigns").innerHTML = CONFIG.designs.map(d =>
+    `<label class="choice"><input type="checkbox" name="wDesign" value="${d.title}"><span>${d.title}</span></label>`).join("");
+  if (closed) {
+    $("#orderSection").style.display = "none";
+    $("#waitlist").style.display = "block";
+  }
+  $("#waitBtn").addEventListener("click", async () => {
+    const wf = $("#waitForm"), f = new FormData(wf), err = $("#waitErr");
+    const name = (f.get("wName") || "").trim(), email = (f.get("wEmail") || "").trim();
+    const probs = [];
+    if (!name) probs.push("Add your name.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) probs.push("Add your email address.");
+    if (probs.length) { err.innerHTML = probs.join("<br>"); err.style.display = "block"; return; }
+    err.style.display = "none";
+    const btn = $("#waitBtn"); btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      if (!CONFIG.endpoint) throw new Error("no-endpoint");
+      await fetch(CONFIG.endpoint, { method: "POST", mode: "no-cors", body: new URLSearchParams({
+        type: "waitlist", name, email, phone: (f.get("wPhone") || "").trim(),
+        designs: f.getAll("wDesign").join(", "), count: (f.get("wCount") || "").trim(),
+        size: f.get("wSize") || "", notes: (f.get("wNotes") || "").trim()
+      }) });
+    } catch (e) {
+      btn.disabled = false; btn.textContent = "Join the waitlist";
+      err.innerHTML = "Something went wrong. Please email kewaeats@gmail.com to join the waitlist.";
+      err.style.display = "block"; return;
+    }
+    $("#waitBody").style.display = "none"; $("#waitDone").style.display = "block";
+  });
 
   // Floating total bar: shows once there are mugs, hides when the full total panel is on screen
   let panelVisible = false;

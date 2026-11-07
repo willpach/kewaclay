@@ -16,6 +16,7 @@
     cashtag: "$WillPachecoClay",       // ← your Cash App $cashtag
     endpoint: "https://script.google.com/macros/s/AKfycbzmRh3w_ziBBOd7Vd1VH3CGSjHeaEyxBDKl3Lhz6a1rDq6ydiQf-WzaEI4x5YV8JHlrmQ/exec", // Google Sheet connection
     deadline: "2026-11-22T23:59:00-07:00",
+    soldOut: true,                     // true = this round is full: no new orders
     deadlineLabel: "Sunday, Nov 22",
     readyLabel: "Pickup starts the week of Monday, Dec 7",
     basePrice: 30,
@@ -201,14 +202,14 @@
 </head>
 <body>
 <div class="band" aria-hidden="true"></div>
-<div class="closed-banner" id="closedBanner">Pre-orders are closed for this round. Thank you! Look for me at upcoming markets.</div>
+<div class="closed-banner" id="closedBanner">This round of mugs is sold out. Thank you so much! Check back soon for the next round, or email kewaeats@gmail.com to get on the list.</div>
 
 <header class="wrap">
   <img class="logo" src="images/logo.png" alt="Hand-drawn mug with smiling dinosaurs and a stepped band">
   <div class="kicker">Holiday pre-orders</div>
   <h1>Hand-painted black on white ceramic mugs</h1>
   <p>Hand-painted and fired in small batches. Every mug is one of a kind.</p>
-  <p class="limited" id="limitedNote">Only 3 more available this round. Check back if we run out!</p>
+  <p class="limited" id="limitedNote">This round is sold out. Thank you! Check back soon for the next round.</p>
   <div class="facts">
     <span class="fact">16 oz · $30</span>
     <span class="fact">Save on 2 or 4</span>
@@ -385,8 +386,8 @@
   $("#factReady").textContent = CONFIG.readyLabel.replace("Pickup starts the week of Monday,", "Pickup week of");
 
   // Closed after deadline
-  const closed = Date.now() > new Date(CONFIG.deadline).getTime();
-  if (closed) { $("#closedBanner").style.display = "block"; }
+  const closed = CONFIG.soldOut || Date.now() > new Date(CONFIG.deadline).getTime();
+  if (closed) { $("#closedBanner").style.display = "block"; $("#limitedNote").style.display = "none"; $("#factDeadline").style.display = "none"; }
 
   // Design cards
   const grid = $("#designGrid");
@@ -401,7 +402,7 @@
         <h3>${d.title}</h3>
         <div class="price">${money(price)}${d.extra ? ` <span class="help">(+${money(d.extra)} artist design)</span>` : ""}</div>
         <div class="blurb">${d.blurb}</div>
-        <button class="btn" type="button" ${closed ? "disabled" : ""}>Add mug</button>
+        <button class="btn" type="button" ${closed ? "disabled" : ""}>${closed ? "Sold out" : "Add mug"}</button>
       </div>`;
     const img = card.querySelector("img");
     img.addEventListener("error", () => { img.style.display = "none"; card.querySelector(".fallback").hidden = false; });

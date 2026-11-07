@@ -17,7 +17,7 @@ const HEADERS = [
   "Received", "Order #", "Name", "Phone", "Email", "Instagram/Facebook",
   "# Mugs", "Mugs", "Total", "Payment choice", "Pay now", "Due at pickup",
   "Get mugs by", "Shipping address", "Cash App name", "Gift?", "Notes",
-  "Paid? (you fill in)", "Picked up? (you fill in)"
+  "Paid? (you fill in)", "Amount paid (you fill in)", "Picked up? (you fill in)"
 ];
 
 function doPost(e) {
@@ -37,7 +37,7 @@ function doPost(e) {
       new Date(), p.orderId, p.name, p.phone, p.email, p.social,
       Number(p.mugCount || 0), p.mugs, Number(p.total || 0), p.payChoice,
       Number(p.dueNow || 0), Number(p.dueAtPickup || 0),
-      p.fulfillment, p.address, p.cashappName, p.gift, p.notes, "", ""
+      p.fulfillment, p.address, p.cashappName, p.gift, p.notes, "", "", ""
     ]);
     return ContentService.createTextOutput("ok");
   } finally {

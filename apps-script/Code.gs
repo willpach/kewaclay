@@ -12,6 +12,7 @@
  *   "Waitlist"              — waitlist sign-ups
  *   "Inventory"             — one-of-a-kind pieces shown in "Available now"
  *                             Status: Available (shows with Buy button), Sold (shows SOLD), anything else = hidden
+ *                             Glaze option: Yes = buyer can add food-safe glaze; No = not offered
  */
 
 const HEADERS = [
@@ -24,7 +25,7 @@ const WAITLIST_HEADERS = [
 ];
 const INVENTORY_HEADERS = [
   "ID", "Item", "Type", "Description", "Size", "Price", "Cost", "Photos",
-  "Status", "Sold to", "Order #", "Date sold", "Notes"
+  "Status", "Sold to", "Order #", "Date sold", "Notes", "Glaze option"
 ];
 
 function setupInventory() {
@@ -34,14 +35,14 @@ function setupInventory() {
   inv = ss.insertSheet("Inventory");
   inv.appendRow(INVENTORY_HEADERS);
   inv.appendRow(["B-01", "Dinosaur bowl with stepped designs", "Bowl",
-    "Smiling dinosaurs with Mesa Verde–style stepped designs, black on white. Decorative (not for food). Want it glazed food safe? Ask me about adding glaze.",
-    "6 in wide · 3.5 in tall", 120, "", "bowl1.jpg", "Available", "", "", "", ""]);
+    "Smiling dinosaurs with Mesa Verde–style stepped designs, black on white. Decorative (not for food). Can be glazed food safe for $15 more (choose it when you buy).",
+    "6 in wide · 3.5 in tall", 120, "", "bowl1.jpg", "Available", "", "", "", "", "Yes"]);
   inv.appendRow(["B-02", "Dinosaur bowl with triangle designs", "Bowl",
-    "Smiling dinosaurs parading under bold black triangles. Decorative (not for food). Want it glazed food safe? Ask me about adding glaze.",
-    "6 in wide · 3.5 in tall", 120, "", "bowl2.jpg", "Available", "", "", "", ""]);
+    "Smiling dinosaurs parading under bold black triangles. Decorative (not for food). Can be glazed food safe for $15 more (choose it when you buy).",
+    "6 in wide · 3.5 in tall", 120, "", "bowl2.jpg", "Available", "", "", "", "", "Yes"]);
   inv.appendRow(["B-03", "Tall dinosaur bowl (surface crack)", "Bowl",
     "A taller bowl with a wavy rim, a dinosaur and stepped designs. Has a small surface crack (tap the photo to see it), so it's priced lower. Decorative (not for food).",
-    "5 in wide · 5.5 in tall", 75, "", "bowl3.jpg, bowl3-crack.jpg", "Available", "", "", "", ""]);
+    "5 in wide · 5.5 in tall", 75, "", "bowl3.jpg, bowl3-crack.jpg", "Available", "", "", "", "", "No"]);
   inv.setFrozenRows(1);
   inv.getRange(1, 1, 1, INVENTORY_HEADERS.length).setFontWeight("bold");
 }
@@ -52,11 +53,11 @@ function doGet(e) {
     const inv = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Inventory");
     const items = [];
     if (inv && inv.getLastRow() > 1) {
-      const rows = inv.getRange(2, 1, inv.getLastRow() - 1, INVENTORY_HEADERS.length).getValues();
+      const rows = inv.getRange(2, 1, inv.getLastRow() - 1, Math.max(inv.getLastColumn(), INVENTORY_HEADERS.length)).getValues();
       rows.forEach(r => {
         if (!r[0]) return;
         items.push({ id: String(r[0]), item: r[1], type: r[2], description: r[3], size: r[4],
-                     price: Number(r[5]) || 0, photos: r[7], status: r[8] });
+                     price: Number(r[5]) || 0, photos: r[7], status: r[8], glaze: r[13] });
       });
     }
     return ContentService.createTextOutput(JSON.stringify({ items: items }))

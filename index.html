@@ -17,7 +17,9 @@
     endpoint: "https://script.google.com/macros/s/AKfycbzmRh3w_ziBBOd7Vd1VH3CGSjHeaEyxBDKl3Lhz6a1rDq6ydiQf-WzaEI4x5YV8JHlrmQ/exec", // Google Sheet connection
     deadline: "2026-11-22T23:59:00-07:00",
     soldOut: false,                    // true = this round is full: no new orders
-    showInventory: true,               // "Available now" section, read from the Inventory tab of the Sheet
+    showInventory: true,
+    glazePrice: 15,                    // add-on to glaze a decorative piece food safe
+    glazeReadyLabel: "ready after the Dec 5 firing (pickup week of Dec 7)",               // "Available now" section, read from the Inventory tab of the Sheet
     deadlineLabel: "Sunday, Nov 22",
     readyLabel: "Pickup starts the week of Monday, Dec 7",
     basePrice: 30,
@@ -408,6 +410,8 @@
     <div id="buyBody">
       <h2 id="buyTitle">Buy this piece</h2>
       <p class="sub" id="buySub"></p>
+      <label class="choice" id="bGlazeRow" style="display:none"><input type="checkbox" name="bGlaze" id="bGlaze">
+        <span>Glaze it food safe (+<span id="bGlazePrice"></span>)<br><span class="help" id="bGlazeHelp"></span></span></label>
       <label class="field">Name
         <input type="text" name="bName" autocomplete="name" required>
       </label>
@@ -419,7 +423,7 @@
       </label>
       <fieldset>
         <legend>How will you get it?</legend>
-        <label class="choice"><input type="radio" name="bGet" value="Pickup — arrange when ready" checked><span>Pick up<br><span class="help">It's ready now. I'll email you to set a time and place.</span></span></label>
+        <label class="choice"><input type="radio" name="bGet" value="Pickup — arrange when ready" checked><span>Pick up<br><span class="help" id="bPickHelp">It's ready now. I'll email you to set a time and place.</span></span></label>
         <label class="choice"><input type="radio" name="bGet" value="Local delivery (Santo Domingo Pueblo)"><span>Local delivery in Santo Domingo Pueblo</span></label>
         <label class="choice"><input type="radio" name="bGet" value="Shipping"><span>Shipping<br><span class="help">Shipping is extra. I'll email you the cost.</span></span></label>
       </fieldset>
@@ -796,11 +800,26 @@
   function openBuy(it, card) {
     buying = { it, card };
     $("#buyTitle").textContent = it.item;
-    $("#buySub").textContent = `${money(Number(it.price) || 0)}${it.size ? " · " + it.size : ""} · paid in full`;
+    const canGlaze = !/^no$/i.test(String(it.glaze || "").trim()) && !/crack/i.test((it.item || "") + " " + (it.description || ""));
+    buying.canGlaze = canGlaze;
+    $("#bGlaze").checked = false;
+    $("#bGlazeRow").style.display = canGlaze ? "flex" : "none";
+    $("#bGlazePrice").textContent = money(CONFIG.glazePrice);
+    $("#bGlazeHelp").textContent = "Makes it safe for food. It will be " + CONFIG.glazeReadyLabel + ".";
+    updateBuySub();
     $("#buyBody").style.display = "block"; $("#buyDone").style.display = "none";
     $("#buyErr").style.display = "none"; $("#buyGo").disabled = false; $("#buyGo").textContent = "Buy it";
     $("#buyDlg").showModal();
   }
+  function buyPrice() {
+    return (Number(buying.it.price) || 0) + (buying.canGlaze && $("#bGlaze").checked ? CONFIG.glazePrice : 0);
+  }
+  function updateBuySub() {
+    const it = buying.it, glazed = buying.canGlaze && $("#bGlaze").checked;
+    $("#bPickHelp").textContent = glazed ? "Ready after the glaze firing. I'll email you to set a time and place." : "It's ready now. I'll email you to set a time and place.";
+    $("#buySub").textContent = `${money(buyPrice())}${glazed ? " (with glaze)" : ""}${it.size ? " · " + it.size : ""} · paid in full`;
+  }
+  $("#bGlaze").addEventListener("change", updateBuySub);
   $("#buyCancel").addEventListener("click", () => $("#buyDlg").close());
   $("#buyClose").addEventListener("click", () => $("#buyDlg").close());
   $("#buyForm").addEventListener("change", () => {
@@ -824,13 +843,14 @@
       }
     } catch (e) { }
     btn.textContent = "Sending…";
-    const price = Number(buying.it.price) || 0;
+    const glazed = buying.canGlaze && $("#bGlaze").checked;
+    const price = buyPrice();
     const id = "B-" + orderId().slice(2);
     try {
       await fetch(CONFIG.endpoint, { method: "POST", mode: "no-cors", body: new URLSearchParams({
-        type: "item_order", itemId: buying.it.id, orderId: id, item: buying.it.item, price: String(price),
+        type: "item_order", itemId: buying.it.id, orderId: id, item: buying.it.item + (glazed ? " + food-safe glaze (+$" + CONFIG.glazePrice + ")" : ""), price: String(price),
         name, email, phone: (f.get("bPhone") || "").trim(), fulfillment: getBy,
-        address: (f.get("bAddr") || "").trim(), cashappName: (f.get("bCash") || "").trim(), notes: (f.get("bNotes") || "").trim()
+        address: (f.get("bAddr") || "").trim(), cashappName: (f.get("bCash") || "").trim(), notes: (glazed ? "GLAZE: fire with next batch. " : "") + (f.get("bNotes") || "").trim()
       }) });
     } catch (e) {
       btn.disabled = false; btn.textContent = "Buy it";

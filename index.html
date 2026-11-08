@@ -17,6 +17,7 @@
     endpoint: "https://script.google.com/macros/s/AKfycbzmRh3w_ziBBOd7Vd1VH3CGSjHeaEyxBDKl3Lhz6a1rDq6ydiQf-WzaEI4x5YV8JHlrmQ/exec", // Google Sheet connection
     deadline: "2026-11-22T23:59:00-07:00",
     soldOut: false,                    // true = this round is full: no new orders
+    showInventory: true,               // "Available now" section, read from the Inventory tab of the Sheet
     deadlineLabel: "Sunday, Nov 22",
     readyLabel: "Pickup starts the week of Monday, Dec 7",
     basePrice: 30,
@@ -189,6 +190,12 @@
   .dlg ul { margin: 0; padding-left: 18px; }
   .dlg .actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
   .done .again { margin-top: 18px; }
+  #availNow { display: none; }
+  .inv .ph { aspect-ratio: 4 / 3 !important; }
+  .inv .meta { font-size: 14px; color: var(--muted); }
+  .inv .sold-badge { position: absolute; top: 10px; left: 10px; background: var(--ink); color: #fff; font-weight: 800; letter-spacing: .1em; padding: 4px 10px; border-radius: 8px; font-size: 13px; }
+  .inv .card.is-sold img { opacity: .45; }
+  .dlg .row2 { display: grid; grid-template-columns: 1fr; gap: 0; }
   .floatbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--ink); color: #fff;
     transform: translateY(110%); transition: transform .25s ease; box-shadow: 0 -6px 20px rgba(0,0,0,.18); }
   .floatbar.show { transform: none; }
@@ -231,6 +238,12 @@
 <div class="steps" aria-hidden="true"></div>
 
 <main class="wrap" id="orderArea">
+  <section id="availNow" class="inv">
+    <h2>Available now</h2>
+    <p class="sub">One of a kind and ready to go. Buy it before someone else does!</p>
+    <div class="grid" id="invGrid"></div>
+  </section>
+
   <section>
     <h2>1. Pick your designs</h2>
     <p class="sub">Tap “Add mug” for each one you want. You can add the same design more than once.</p>
@@ -389,6 +402,53 @@
     </div>
   </div>
 </section>
+
+<dialog id="buyDlg" aria-labelledby="buyTitle">
+  <form class="dlg" id="buyForm" novalidate>
+    <div id="buyBody">
+      <h2 id="buyTitle">Buy this piece</h2>
+      <p class="sub" id="buySub"></p>
+      <label class="field">Name
+        <input type="text" name="bName" autocomplete="name" required>
+      </label>
+      <label class="field">Email <span class="help">I'll email you to arrange pickup or shipping.</span>
+        <input type="email" name="bEmail" autocomplete="email" required>
+      </label>
+      <label class="field">Phone <span class="opt">(optional)</span>
+        <input type="tel" name="bPhone" autocomplete="tel">
+      </label>
+      <fieldset>
+        <legend>How will you get it?</legend>
+        <label class="choice"><input type="radio" name="bGet" value="Pickup — arrange when ready" checked><span>Pick up<br><span class="help">It's ready now. I'll email you to set a time and place.</span></span></label>
+        <label class="choice"><input type="radio" name="bGet" value="Local delivery (Santo Domingo Pueblo)"><span>Local delivery in Santo Domingo Pueblo</span></label>
+        <label class="choice"><input type="radio" name="bGet" value="Shipping"><span>Shipping<br><span class="help">Shipping is extra. I'll email you the cost.</span></span></label>
+      </fieldset>
+      <label class="field" id="bAddrField" style="display:none">Shipping address
+        <textarea name="bAddr" rows="3"></textarea>
+      </label>
+      <label class="field">Your Cash App name <span class="help">So I can match your payment.</span>
+        <input type="text" name="bCash">
+      </label>
+      <label class="field">Anything else? <span class="opt">(optional)</span>
+        <textarea name="bNotes" rows="2"></textarea>
+      </label>
+      <div class="err" id="buyErr"></div>
+      <div class="actions">
+        <button type="button" class="btn ghost" id="buyCancel">Cancel</button>
+        <button type="button" class="btn" id="buyGo">Buy it</button>
+      </div>
+    </div>
+    <div id="buyDone" style="display:none;text-align:center">
+      <h2>It's yours!</h2>
+      <p>Your order number is</p>
+      <div class="oid" id="buyId" style="font-size:26px;font-weight:800;letter-spacing:.06em;border:2px dashed var(--ink);display:inline-block;padding:6px 16px;border-radius:10px;margin:6px 0 12px"></div>
+      <p>Please pay <strong id="buyPay"></strong> on Cash App and put your order number in the note.</p>
+      <a class="btn" id="buyLink" href="#" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none">Pay with Cash App</a>
+      <p class="note">I'll email you to arrange pickup or shipping. Questions? Email me: <a href="mailto:kewaeats@gmail.com">kewaeats@gmail.com</a></p>
+      <div class="actions" style="justify-content:center"><button type="button" class="btn ghost" id="buyClose">Close</button></div>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="reviewDlg" aria-labelledby="reviewTitle">
   <div class="dlg">
@@ -697,6 +757,96 @@
     document.querySelector("#designGrid").scrollIntoView({ behavior: "smooth" });
   });
   if (closed) $("#updateToggle").style.display = "none";
+
+  // Available now: one-of-a-kind pieces from the Inventory tab
+  let buying = null;
+  function renderInventory(items) {
+    const list = (items || []).filter(i => i && i.id && i.item && /^(available|sold)$/i.test(i.status || ""));
+    if (!list.length) return;
+    const g = $("#invGrid"); g.innerHTML = "";
+    list.forEach(it => {
+      const sold = /^sold$/i.test(it.status);
+      const photos = String(it.photos || "").split(",").map(x => x.trim()).filter(Boolean).map(x => /^https?:|^\//.test(x) ? x : "images/" + x);
+      const card = document.createElement("div");
+      card.className = "card" + (sold ? " is-sold" : "");
+      card.innerHTML = `
+        <div class="ph">${photos[0] ? `<img alt="${esc(it.item)}" src="${esc(photos[0])}" loading="lazy">` : `<div class="fallback">Photo coming soon</div>`}
+          ${sold ? '<span class="sold-badge">SOLD</span>' : ""}
+          ${photos.length > 1 ? `<span class="hint">1 / ${photos.length}</span>` : ""}</div>
+        <div class="body">
+          <h3>${esc(it.item)}</h3>
+          <div class="price">${money(Number(it.price) || 0)}</div>
+          ${it.size ? `<div class="meta">${esc(it.size)}</div>` : ""}
+          <div class="blurb">${esc(it.description || "")}</div>
+          <button class="btn" type="button" ${sold ? "disabled" : ""}>${sold ? "Sold" : "Buy it"}</button>
+        </div>`;
+      if (photos.length > 1) {
+        let k = 0; const img = card.querySelector("img");
+        card.querySelector(".ph").style.cursor = "pointer";
+        card.querySelector(".ph").addEventListener("click", () => {
+          k = (k + 1) % photos.length; img.src = photos[k];
+          card.querySelector(".hint").textContent = `${k + 1} / ${photos.length}`;
+        });
+      }
+      if (!sold) card.querySelector("button").addEventListener("click", () => openBuy(it, card));
+      g.appendChild(card);
+    });
+    $("#availNow").style.display = "block";
+  }
+  function openBuy(it, card) {
+    buying = { it, card };
+    $("#buyTitle").textContent = it.item;
+    $("#buySub").textContent = `${money(Number(it.price) || 0)}${it.size ? " · " + it.size : ""} · paid in full`;
+    $("#buyBody").style.display = "block"; $("#buyDone").style.display = "none";
+    $("#buyErr").style.display = "none"; $("#buyGo").disabled = false; $("#buyGo").textContent = "Buy it";
+    $("#buyDlg").showModal();
+  }
+  $("#buyCancel").addEventListener("click", () => $("#buyDlg").close());
+  $("#buyClose").addEventListener("click", () => $("#buyDlg").close());
+  $("#buyForm").addEventListener("change", () => {
+    $("#bAddrField").style.display = $("#buyForm").bGet.value === "Shipping" ? "block" : "none";
+  });
+  $("#buyGo").addEventListener("click", async () => {
+    const bf = $("#buyForm"), f = new FormData(bf), err = $("#buyErr");
+    const name = (f.get("bName") || "").trim(), email = (f.get("bEmail") || "").trim(), getBy = f.get("bGet");
+    const probs = [];
+    if (!name) probs.push("Add your name.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) probs.push("Add your email address.");
+    if (getBy === "Shipping" && !(f.get("bAddr") || "").trim()) probs.push("Add your shipping address.");
+    if (probs.length) { err.innerHTML = probs.join("<br>"); err.style.display = "block"; return; }
+    const btn = $("#buyGo"); btn.disabled = true; btn.textContent = "Checking…";
+    try {
+      const fresh = await (await fetch(CONFIG.endpoint + "?type=inventory&t=" + Date.now())).json();
+      const now = (fresh.items || []).find(x => x.id === buying.it.id);
+      if (!now || !/^available$/i.test(now.status)) {
+        err.innerHTML = "Sorry, someone just bought this piece!"; err.style.display = "block";
+        btn.textContent = "Sold"; renderInventory(fresh.items); return;
+      }
+    } catch (e) { }
+    btn.textContent = "Sending…";
+    const price = Number(buying.it.price) || 0;
+    const id = "B-" + orderId().slice(2);
+    try {
+      await fetch(CONFIG.endpoint, { method: "POST", mode: "no-cors", body: new URLSearchParams({
+        type: "item_order", itemId: buying.it.id, orderId: id, item: buying.it.item, price: String(price),
+        name, email, phone: (f.get("bPhone") || "").trim(), fulfillment: getBy,
+        address: (f.get("bAddr") || "").trim(), cashappName: (f.get("bCash") || "").trim(), notes: (f.get("bNotes") || "").trim()
+      }) });
+    } catch (e) {
+      btn.disabled = false; btn.textContent = "Buy it";
+      err.innerHTML = "Something went wrong. Please email kewaeats@gmail.com to buy this piece."; err.style.display = "block"; return;
+    }
+    const tag = CONFIG.cashtag.replace(/^\$/, "");
+    $("#buyId").textContent = id; $("#buyPay").textContent = money(price);
+    $("#buyLink").href = `https://cash.app/$${tag}/${price}`;
+    $("#buyBody").style.display = "none"; $("#buyDone").style.display = "block";
+    const c = buying.card; c.classList.add("is-sold");
+    const b = c.querySelector("button"); b.disabled = true; b.textContent = "Sold";
+    c.querySelector(".ph").insertAdjacentHTML("beforeend", '<span class="sold-badge">SOLD</span>');
+  });
+  if (CONFIG.showInventory && CONFIG.endpoint) {
+    fetch(CONFIG.endpoint + "?type=inventory&t=" + Date.now()).then(r => r.json()).then(d => renderInventory(d.items)).catch(() => {});
+  }
 
   // Waitlist (shown when this round is closed)
   $("#waitDesigns").innerHTML = CONFIG.designs.map(d =>

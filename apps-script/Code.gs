@@ -34,13 +34,13 @@ function setupInventory() {
   inv = ss.insertSheet("Inventory");
   inv.appendRow(INVENTORY_HEADERS);
   inv.appendRow(["B-01", "Dinosaur bowl with stepped designs", "Bowl",
-    "Smiling dinosaurs with Mesa Verde–style stepped designs, black on white.",
+    "Smiling dinosaurs with Mesa Verde–style stepped designs, black on white. Decorative (not for food). Want it glazed food safe? Ask me about adding glaze.",
     "6 in wide · 3.5 in tall", 120, "", "bowl1.jpg", "Available", "", "", "", ""]);
   inv.appendRow(["B-02", "Dinosaur bowl with triangle designs", "Bowl",
-    "Smiling dinosaurs parading under bold black triangles.",
+    "Smiling dinosaurs parading under bold black triangles. Decorative (not for food). Want it glazed food safe? Ask me about adding glaze.",
     "6 in wide · 3.5 in tall", 120, "", "bowl2.jpg", "Available", "", "", "", ""]);
   inv.appendRow(["B-03", "Tall dinosaur bowl (surface crack)", "Bowl",
-    "A taller bowl with a wavy rim, a dinosaur and stepped designs. Has a small surface crack (tap the photo to see it), so it's priced lower.",
+    "A taller bowl with a wavy rim, a dinosaur and stepped designs. Has a small surface crack (tap the photo to see it), so it's priced lower. Decorative (not for food).",
     "5 in wide · 5.5 in tall", 75, "", "bowl3.jpg, bowl3-crack.jpg", "Available", "", "", "", ""]);
   inv.setFrozenRows(1);
   inv.getRange(1, 1, 1, INVENTORY_HEADERS.length).setFontWeight("bold");

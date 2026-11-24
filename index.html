@@ -20,8 +20,8 @@
     showInventory: true,
     // Sale on the "Available now" pieces. Prices round to the dollar; the glaze add-on stays full price.
     // Add ?sale=1 to the page address to preview the sale before it starts.
-    sale: { percentOff: 25, start: "2026-11-27T00:00:00-07:00", end: "2026-11-30T23:59:00-07:00",
-            name: "Black Friday sale", datesLabel: "Fri, Nov 27 – Mon, Nov 30" },
+    sale: { percentOff: 25, start: "2026-11-23T00:00:00-07:00", end: "2026-11-30T23:59:00-07:00",
+            name: "Black Friday sale", datesLabel: "now through Mon, Nov 30" },
     glazePrice: 15,                    // add-on to glaze a decorative piece food safe
     glazeReadyLabel: "ready after the Dec 5 firing (pickup week of Dec 7)",               // "Available now" section, read from the Inventory tab of the Sheet
     deadlineLabel: "Sunday, Nov 22",
@@ -103,6 +103,14 @@
 
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .group-h { font-size: 17px; margin: 18px 0 10px; letter-spacing: .02em; }
+  /* Mugs sold out: show the designs small */
+  #mugDesigns.mini h2 { font-size: 22px; }
+  #mugDesigns.mini .grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  #mugDesigns.mini .card .body { padding: 8px; gap: 4px; }
+  #mugDesigns.mini .card h3 { font-size: 13px; }
+  #mugDesigns.mini .card .price, #mugDesigns.mini .card .blurb { display: none; }
+  #mugDesigns.mini .card .btn { padding: 6px 8px; font-size: 12px; }
+  #mugDesigns.mini .group-h { font-size: 14px; margin: 12px 0 8px; }
   .group-h:first-of-type { margin-top: 0; }
   .group-h .by { font-weight: 500; color: var(--muted); }
   .gtk { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 28px; }
@@ -222,9 +230,9 @@
 
 <header class="wrap">
   <img class="logo" src="images/logo.png" alt="Hand-drawn mug with smiling dinosaurs and a stepped band">
-  <div class="kicker">Holiday pre-orders</div>
-  <h1>Hand-painted black on white ceramic mugs</h1>
-  <p>Hand-painted and fired in small batches. Every mug is one of a kind.</p>
+  <div class="kicker" id="kicker">Holiday pre-orders</div>
+  <h1 id="heroTitle">Hand-painted black on white ceramic mugs</h1>
+  <p id="heroText">Hand-painted and fired in small batches. Every mug is one of a kind.</p>
   <p class="limited" id="limitedNote">Last one! Only 1 mug left this round.</p>
   <div class="facts">
     <span class="fact">16 oz · $30</span>
@@ -254,9 +262,9 @@
     <div class="grid" id="invGrid"></div>
   </section>
 
-  <section>
-    <h2>1. Pick your designs</h2>
-    <p class="sub">Tap “Add mug” for each one you want. You can add the same design more than once.</p>
+  <section id="mugDesigns">
+    <h2 id="mugH">1. Pick your designs</h2>
+    <p class="sub" id="mugSub">Tap “Add mug” for each one you want. You can add the same design more than once.</p>
     <h3 class="group-h">Dinosaur mugs <span class="by">by William Andrew Pacheco</span></h3>
     <div class="grid" id="designGrid"></div>
     <h3 class="group-h">Designed by guest artists</h3>
@@ -499,7 +507,19 @@
 
   // Closed after deadline
   const closed = CONFIG.soldOut || Date.now() > new Date(CONFIG.deadline).getTime();
-  if (closed) { $("#closedBanner").style.display = "block"; $("#limitedNote").style.display = "none"; $("#factDeadline").style.display = "none"; }
+  if (closed) {
+    $("#closedBanner").style.display = "block"; $("#limitedNote").style.display = "none"; $("#factDeadline").style.display = "none";
+    // Mugs are sold out: lead with the pieces for sale and show the mug designs small
+    const sc = CONFIG.sale, nowT = Date.now();
+    const saleLive = sc && nowT >= new Date(sc.start).getTime() && nowT <= new Date(sc.end).getTime();
+    $("#kicker").textContent = saleLive ? `${sc.name} · ${sc.percentOff}% off` : "Available now";
+    $("#heroTitle").textContent = "Hand-painted black on white pottery";
+    $("#heroText").textContent = "Bowls and jars, hand-painted and one of a kind. Mugs are sold out this round.";
+    document.querySelector(".facts").style.display = "none";
+    $("#mugDesigns").classList.add("mini");
+    $("#mugH").textContent = "Mugs: sold out this round";
+    $("#mugSub").textContent = "Tap a design to join the waitlist, and I'll email you when the next round opens.";
+  }
 
   // Design cards
   const grid = $("#designGrid");
@@ -818,7 +838,7 @@
     if (saleOn || saleSoon) {
       $("#saleNote").textContent = saleOn
         ? `${SALE.name}: ${SALE.percentOff}% off every piece here, ${SALE.datesLabel}.`
-        : `Coming soon: ${SALE.name}, ${SALE.percentOff}% off every piece here, ${SALE.datesLabel}.`;
+        : `Coming soon: ${SALE.name}, ${SALE.percentOff}% off every piece here.`;
       $("#saleNote").style.display = "block";
     }
     $("#availNow").style.display = "block";

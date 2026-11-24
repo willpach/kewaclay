@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hand-painted black on white ceramic mugs · Pre-orders</title>
+<title>Kewa Clay · Pottery by William Andrew Pacheco</title>
 <link rel="icon" type="image/png" href="images/favicon.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-<meta name="description" content="Holiday pre-orders for hand-painted black on white ceramic mugs. Orders close Nov 22.">
+<meta name="description" content="Kewa Clay: hand-painted black on white pottery by William Andrew Pacheco. One-of-a-kind bowls, jars and mugs.">
 <script>
   /* ============================================================
      SETTINGS — edit these to change prices, dates and payment
      ============================================================ */
   const CONFIG = {
-    shopName: "Hand-Painted Mugs",
+    shopName: "Kewa Clay",
     cashtag: "$WillPachecoClay",       // ← your Cash App $cashtag
     endpoint: "https://script.google.com/macros/s/AKfycbzmRh3w_ziBBOd7Vd1VH3CGSjHeaEyxBDKl3Lhz6a1rDq6ydiQf-WzaEI4x5YV8JHlrmQ/exec", // Google Sheet connection
     deadline: "2026-11-22T23:59:00-07:00",
@@ -87,8 +87,16 @@
 
   header { padding: 34px 0 28px; text-align: center; }
   header .limited { display: inline-block; margin: 14px auto 0; background: var(--ink); color: #fff; font-weight: 700; padding: 8px 16px; border-radius: 10px; font-size: 15px; }
-  header .logo { display: block; width: 150px; height: auto; margin: 0 auto 14px; }
-  @media (max-width: 520px) { header .logo { width: 120px; } }
+  header .logo { display: block; width: min(380px, 86%); height: auto; margin: 0 auto 14px; mix-blend-mode: multiply; }
+  header .tagline { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 19px; color: var(--ink); margin: -6px auto 12px; }
+  /* Tabs */
+  .tabs { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1.5px solid var(--line); }
+  .tabs .in { max-width: 980px; margin: 0 auto; padding: 0 20px; display: flex; gap: 6px; }
+  .tabs button { flex: 1; max-width: 260px; background: none; border: 0; border-bottom: 3px solid transparent; padding: 14px 10px 12px; font-weight: 700; font-size: 16px; color: var(--muted); }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .tabs .badge { font-weight: 600; font-size: 12px; color: var(--muted); margin-left: 4px; }
+  body[data-tab="now"] .tab-mugs, body[data-tab="mugs"] .tab-now { display: none !important; }
+  .empty-now { color: var(--muted); padding: 10px 0 30px; }
   header .kicker { letter-spacing: .18em; text-transform: uppercase; font-size: 13px; color: var(--muted); font-weight: 600; }
   header h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(32px, 6vw, 52px); line-height: 1.08; margin: 10px 0 14px; }
   header p { max-width: 620px; margin: 0 auto; color: var(--muted); }
@@ -226,13 +234,14 @@
 </head>
 <body>
 <div class="band" aria-hidden="true"></div>
-<div class="closed-banner" id="closedBanner">This round of mugs is sold out. Thank you so much! <a href="#waitlist" style="color:#fff">Join the waitlist</a> and I'll email you when the next round opens.</div>
+<div class="closed-banner" id="closedBanner">This round of mugs is sold out. Thank you so much! <a href="#waitlist" data-go="mugs" style="color:#fff">Join the waitlist</a> and I'll email you when the next round opens.</div>
 
 <header class="wrap">
-  <img class="logo" src="images/logo.png" alt="Hand-drawn mug with smiling dinosaurs and a stepped band">
-  <div class="kicker" id="kicker">Holiday pre-orders</div>
-  <h1 id="heroTitle">Hand-painted black on white ceramic mugs</h1>
-  <p id="heroText">Hand-painted and fired in small batches. Every mug is one of a kind.</p>
+  <img class="logo" src="images/logo-kewaclay.jpg" alt="Drawing of a mug, two jars and a bowl painted with smiling dinosaurs and stepped designs">
+  <div class="kicker" id="kicker">Hand-painted black on white pottery</div>
+  <h1 id="heroTitle">Kewa Clay</h1>
+  <p class="tagline">Pottery by William Andrew Pacheco</p>
+  <p id="heroText">Hand-painted and fired in small batches. Every piece is one of a kind.</p>
   <p class="limited" id="limitedNote">Last one! Only 1 mug left this round.</p>
   <div class="facts">
     <span class="fact">16 oz · $30</span>
@@ -240,7 +249,7 @@
     <span class="fact" id="factDeadline">Orders close Nov 22</span>
     <span class="fact" id="factReady">Pickup week of Dec 7</span>
   </div>
-  <p class="help" style="margin-top:12px"><a href="#goodToKnow" style="color:inherit">Care, deposit &amp; details ↓</a></p>
+  <p class="help" style="margin-top:12px"><a href="#goodToKnow" data-go="mugs" style="color:inherit">Mug care, deposit &amp; details ↓</a></p>
   <div class="update-box">
     <button type="button" class="link" id="updateToggle">Already ordered and need to change it?</button>
     <div class="update-form" id="updateForm">
@@ -253,16 +262,21 @@
 </header>
 
 <div class="steps" aria-hidden="true"></div>
+<nav class="tabs" aria-label="Shop sections"><div class="in" role="tablist">
+  <button type="button" role="tab" id="tabNow" data-tab="now" aria-selected="true">Available now</button>
+  <button type="button" role="tab" id="tabMugs" data-tab="mugs" aria-selected="false">Mugs<span class="badge" id="mugBadge"></span></button>
+</div></nav>
 
 <main class="wrap" id="orderArea">
-  <section id="availNow" class="inv">
+  <section id="availNow" class="inv tab-now">
     <h2>Available now</h2>
     <p class="sub">One of a kind and ready to go. Buy it before someone else does!</p>
     <p class="sale-note" id="saleNote"></p>
     <div class="grid" id="invGrid"></div>
   </section>
+  <p class="empty-now tab-now" id="emptyNow">Loading pieces…</p>
 
-  <section id="mugDesigns">
+  <section id="mugDesigns" class="tab-mugs">
     <h2 id="mugH">1. Pick your designs</h2>
     <p class="sub" id="mugSub">Tap “Add mug” for each one you want. You can add the same design more than once.</p>
     <h3 class="group-h">Dinosaur mugs <span class="by">by William Andrew Pacheco</span></h3>
@@ -273,7 +287,7 @@
     <div class="grid" id="patternGrid"></div>
   </section>
 
-  <section id="orderSection">
+  <section id="orderSection" class="tab-mugs">
     <div class="layout">
       <div>
         <div class="panel">
@@ -350,7 +364,7 @@
     </div>
   </section>
 
-  <section id="waitlist" style="display:none">
+  <section id="waitlist" class="tab-mugs" style="display:none">
     <form class="panel" id="waitForm" novalidate style="max-width:640px;margin:0 auto">
       <div id="waitBody">
         <h2 style="font-size:26px">Join the waitlist</h2>
@@ -391,7 +405,7 @@
   </section>
 </main>
 
-<main class="wrap done" id="doneArea">
+<main class="wrap done tab-mugs" id="doneArea">
   <section>
     <h2>Thank you!</h2>
     <p>Your order number is</p>
@@ -407,7 +421,7 @@
   </section>
 </main>
 
-<section class="wrap" id="goodToKnow" style="padding-top:8px">
+<section class="wrap tab-mugs" id="goodToKnow" style="padding-top:8px">
   <div class="panel">
     <h2 style="font-size:24px;margin-bottom:14px">Good to know</h2>
     <div class="gtk">
@@ -490,7 +504,7 @@
   </div>
 </div>
 <div class="steps" aria-hidden="true"></div>
-<footer class="wrap">Questions? Email me: <a href="mailto:kewaeats@gmail.com?subject=Mug%20order%20question">kewaeats@gmail.com</a> · Every mug is hand-painted and fired with care. Food safe · hand-wash only.</footer>
+<footer class="wrap">Questions? Email me: <a href="mailto:kewaeats@gmail.com?subject=Mug%20order%20question">kewaeats@gmail.com</a> · Kewa Clay · Every piece is hand-painted and fired with care. Mugs are food safe · hand-wash only.</footer>
 <div class="band" aria-hidden="true"></div>
 
 <script>
@@ -512,14 +526,29 @@
     // Mugs are sold out: lead with the pieces for sale and show the mug designs small
     const sc = CONFIG.sale, nowT = Date.now();
     const saleLive = sc && nowT >= new Date(sc.start).getTime() && nowT <= new Date(sc.end).getTime();
-    $("#kicker").textContent = saleLive ? `${sc.name} · ${sc.percentOff}% off` : "Available now";
-    $("#heroTitle").textContent = "Hand-painted black on white pottery";
+    $("#kicker").textContent = saleLive ? `${sc.name} · ${sc.percentOff}% off` : "Hand-painted black on white pottery";
     $("#heroText").textContent = "Bowls and jars, hand-painted and one of a kind. Mugs are sold out this round.";
+    $("#mugBadge").textContent = "· sold out";
     document.querySelector(".facts").style.display = "none";
     $("#mugDesigns").classList.add("mini");
     $("#mugH").textContent = "Mugs: sold out this round";
     $("#mugSub").textContent = "Tap a design to join the waitlist, and I'll email you when the next round opens.";
   }
+
+  // Tabs: "Available now" first, "Mugs" second
+  function showTab(t, scroll) {
+    document.body.dataset.tab = t;
+    document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+    if (scroll) document.querySelector(".tabs").scrollIntoView({ block: "start" });
+  }
+  showTab(/^#(waitlist|goodToKnow|mugs)$/.test(location.hash) ? "mugs" : "now");
+  document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab, window.scrollY > document.querySelector(".tabs").offsetTop)));
+  document.querySelectorAll("[data-go]").forEach(a => a.addEventListener("click", e => {
+    e.preventDefault(); showTab(a.dataset.go);
+    const target = document.querySelector(a.getAttribute("href"));
+    setTimeout(() => (target && target.offsetParent ? target : document.querySelector(".tabs")).scrollIntoView({ behavior: "smooth", block: "start" }), 30);
+  }));
+  if ($("#updateStart")) $("#updateStart").addEventListener("click", () => showTab("mugs"));
 
   // Design cards
   const grid = $("#designGrid");
@@ -806,7 +835,8 @@
   }
   function renderInventory(items) {
     const list = (items || []).filter(i => i && i.id && i.item && /^(available|sold)$/i.test(i.status || ""));
-    if (!list.length) return;
+    if (!list.length) { $("#emptyNow").textContent = "Nothing available right now. Check back soon, or see the Mugs tab."; return; }
+    $("#emptyNow").style.display = "none";
     const g = $("#invGrid"); g.innerHTML = "";
     list.forEach(it => {
       const sold = /^sold$/i.test(it.status);
@@ -911,7 +941,8 @@
     c.querySelector(".ph").insertAdjacentHTML("beforeend", '<span class="sold-badge">SOLD</span>');
   });
   if (CONFIG.showInventory && CONFIG.endpoint) {
-    fetch(CONFIG.endpoint + "?type=inventory&t=" + Date.now()).then(r => r.json()).then(d => renderInventory(d.items)).catch(() => {});
+    fetch(CONFIG.endpoint + "?type=inventory&t=" + Date.now()).then(r => r.json()).then(d => renderInventory(d.items))
+      .catch(() => { $("#emptyNow").textContent = "Couldn't load the pieces. Please refresh the page."; });
   }
 
   // Waitlist (shown when this round is closed)
